@@ -1,0 +1,1273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>什么是HIL测试 · 动画</title>
+<style>
+/* fonts: titles = ClashVector Medium (Latin) + Noto Sans CJK SC Medium (Chinese);
+   body = Inter (Latin) + Noto Sans CJK SC Regular (Chinese). Uses the locally installed fonts. */
+@font-face{font-family:"VTitleEN";src:local("ClashVector Medium"),local("ClashVector-Medium");font-weight:100 900}
+@font-face{font-family:"VTitleCN";src:local("Noto Sans CJK SC Medium"),local("NotoSansCJKsc-Medium");font-weight:100 900}
+@font-face{font-family:"VBodyEN";src:local("Inter Regular"),local("Inter-Regular");font-weight:100 900}
+@font-face{font-family:"VBodyCN";src:local("Noto Sans CJK SC Regular"),local("NotoSansCJKsc-Regular");font-weight:100 900}
+:root{--ft:"VTitleEN","VTitleCN","Noto Sans CJK SC",sans-serif;--fb:"VBodyEN","VBodyCN","Noto Sans CJK SC",sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;font-synthesis:none}
+html,body{height:100%;background:#24262D;overflow:hidden;font-family:var(--fb)}
+#wrap{position:fixed;inset:0 0 64px 0}
+body.clean #wrap{bottom:0}
+body.clean #ctl,body.clean #bar{display:none}
+/* hidden controls come back as an overlay when the mouse moves to the bottom edge (not while recording) */
+body.clean.peek #ctl{display:flex;z-index:40}
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center;background-color:#fff;overflow:hidden;cursor:pointer;transition:background-color .9s ease}
+#stage::before{content:"";position:absolute;inset:0;transition:opacity .9s ease;will-change:opacity;
+  background-image:radial-gradient(ellipse 60% 55% at 50% 45%,rgba(255,255,255,.95),rgba(255,255,255,0)),radial-gradient(rgba(95,104,126,.14) 1.4px,transparent 1.6px),linear-gradient(rgba(224,226,232,.4),rgba(224,226,232,.4));background-size:100% 100%,36px 36px,100% 100%}
+#amb{position:absolute;inset:0;pointer-events:none;transition:opacity .9s ease;will-change:opacity}
+#amb i{position:absolute;border-radius:50%;opacity:.16;animation:drift 26s ease-in-out infinite alternate;will-change:transform;-webkit-mask:radial-gradient(closest-side,#000 25%,transparent);mask:radial-gradient(closest-side,#000 25%,transparent)}
+#amb i:nth-child(1){width:900px;height:900px;left:-310px;top:-270px;background:#7D8FDE}
+#amb i:nth-child(2){width:820px;height:820px;right:-290px;bottom:-250px;background:#33D3FF;animation-delay:-9s}
+#amb i:nth-child(3){width:600px;height:600px;right:calc(18% - 90px);top:-290px;background:#FA5146;opacity:.09;animation-delay:-17s}
+@keyframes drift{to{transform:translate(120px,80px) scale(1.12)}}
+#stage.white::before,#stage.white #amb,#stage.dark::before,#stage.dark #amb{opacity:0}
+#hdr{position:absolute;top:0;left:0;right:0;height:90px;display:flex;align-items:center;justify-content:space-between;padding:0 48px}
+#chap{display:flex;align-items:center;gap:14px;background:#fff;color:#24262D;font-family:var(--ft);font-size:28px;font-weight:500;padding:10px 28px 10px 22px;border-radius:999px;box-shadow:0 8px 24px rgba(28,54,144,.08)}
+#chap::before{content:"";width:14px;height:14px;border-radius:50%;background:#F62634;box-shadow:0 0 0 6px rgba(246,38,52,.15)}
+#brand{display:flex;align-items:center;gap:16px;color:#24262D;font-family:var(--ft);font-weight:500;font-size:28px;letter-spacing:6px}
+#brand svg{height:24px;width:auto}
+#scn{position:absolute;top:90px;left:0;width:1920px;height:800px}
+#scn svg{width:1920px;height:800px;display:block;overflow:visible}
+.scene{position:absolute;inset:0;animation:sceneIn 1s cubic-bezier(.22,1,.36,1) both;will-change:opacity,transform}
+@keyframes sceneIn{from{opacity:0;transform:scale(1.025)}}
+.scene.out{pointer-events:none;animation:sceneOut .7s ease forwards}
+.scene.soft{animation:none}.scene.out.soft{animation:sceneOutSoft .7s ease forwards}
+@keyframes sceneOutSoft{to{opacity:0}}
+.r.instant,.r.instant.on{transition:none!important;filter:none}
+@keyframes sceneOut{to{opacity:0;transform:scale(.985)}}
+/* subtitles: white text with a dark outline (stroke painted under the fill), no background box */
+#sub{position:absolute;left:0;right:0;bottom:78px;display:flex;justify-content:center;padding:0 120px}
+#sub span{color:#fff;font-size:52px;line-height:1.3;letter-spacing:1px;text-align:center;max-width:1680px;
+  -webkit-text-stroke:9px #24262D;paint-order:stroke fill;text-shadow:0 4px 14px rgba(36,38,45,.35)}
+#sub span:empty{display:none}
+#sub.anim span{animation:subIn .6s cubic-bezier(.22,1,.36,1)}
+@keyframes subIn{from{opacity:0;transform:translateY(14px)}}
+#bar{position:absolute;left:0;bottom:0;height:5px;background:linear-gradient(90deg,#D5112A,#FA5146);border-radius:0 3px 3px 0;width:0;transition:width .8s cubic-bezier(.22,1,.36,1)}
+svg text{font-family:var(--fb)}
+svg text.tt{font-family:var(--ft)}
+.card{filter:drop-shadow(0 10px 22px rgba(28,54,144,.09))}
+
+/* reveal system */
+/* no blur on reveals: SVG filters are repainted on the CPU every frame and stall the picture at full resolution */
+.r{opacity:0;transition:opacity .9s cubic-bezier(.22,1,.36,1),transform 1.1s cubic-bezier(.22,1,.36,1);transform-box:fill-box;transform-origin:center}
+.r.up{transform:translateY(26px)}.r.left{transform:translateX(-40px)}.r.right{transform:translateX(40px)}
+.r.pop{transform:scale(.82)}.r.grow{transform:scaleX(0);transform-origin:left center}
+.r.on{opacity:1;transform:none;filter:none}
+.r:not(.on),.r:not(.on) .dr{transition-delay:0s!important} /* delays only when appearing, so stepping back hides at once */
+.r.draw .dr{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.5s cubic-bezier(.65,0,.35,1) var(--d,0s)}
+.r.draw.on .dr{stroke-dashoffset:0}
+
+.flow{stroke-dasharray:16 14;animation:flow 1.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-30}}
+.dashline{stroke-dasharray:14 12}
+.spin{animation:spin 8s linear infinite;transform-box:fill-box;transform-origin:center}
+.spin.fast{animation-duration:.9s}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pulse{animation:pulse 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{50%{transform:scale(1.08);opacity:.65}}
+.flick{animation:flick .12s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:top center}
+@keyframes flick{to{transform:scaleY(1.3)}}
+.rk{transition:transform 2.4s cubic-bezier(.55,0,.85,.55),opacity .25s ease 2.25s}
+.rk.launch{transform:translateY(-380px);opacity:0}
+.beam{fill:#33D3FF;opacity:.35;transition:fill .6s,opacity .6s}
+.beam.danger{fill:#F62634;opacity:.6;animation:blink .7s ease-in-out infinite}
+@keyframes blink{50%{opacity:.25}}
+.shake{animation:shake .45s ease 3;transform-box:fill-box}
+@keyframes shake{25%{transform:translateX(-12px)}75%{transform:translateX(12px)}}
+.bar2{transition:width 1.6s cubic-bezier(.3,.8,.3,1) .5s}
+.bar2.short{width:760px}
+.cn{transition:fill .5s,stroke .5s}
+.cn.hlNode{fill:rgba(0,173,147,.1);stroke:#00AD93}
+.ce{transition:stroke .5s}
+.ce.hlEdge{stroke:#00AD93;marker-end:url(#ah-green)}
+.cn:not(.hlNode),.ce:not(.hlEdge){transition-delay:0s!important}
+/* branch coverage: each decision outcome is traced in orange, then softly pulses */
+.brh{opacity:0;stroke-dasharray:1;stroke-dashoffset:1}
+.brh.go{animation:brTrace .7s cubic-bezier(.65,0,.35,1) both,brPulse 1.6s ease-in-out .7s infinite}
+@keyframes brTrace{from{opacity:1;stroke-dashoffset:1}to{opacity:1;stroke-dashoffset:0}}
+@keyframes brPulse{0%,100%{opacity:1}50%{opacity:.55}}
+.brl text{transition:fill .4s}
+.brl.go text{fill:#FA5146;font-weight:800;transition-delay:var(--bd)}
+.hb{transition:fill .5s,fill-opacity .5s}
+.hb.hot{fill:#D5112A;fill-opacity:.55}
+.glow{filter:drop-shadow(0 0 22px rgba(213,17,42,.6));transition:filter .5s}
+.hx{transition:transform 1.2s cubic-bezier(.65,0,.35,1),opacity .7s ease .2s;transform-box:fill-box;transform-origin:left center}
+.hxinit .hx{transition:none}
+.hwm,.swm{transition:transform 1.2s cubic-bezier(.65,0,.35,1) .3s;transform-box:fill-box;transform-origin:center}
+.hwm.merge{transform:translate(-280px,0)}
+.swm.merge{transform:translate(260px,0) scale(.3)}
+.fadem{transition:opacity .5s}.fadem.merge{opacity:0}
+.led{animation:blink .8s ease-in-out infinite}
+/* shift-left morph: same 4-segment structure in both shapes (the traditional outline split at its first segment's midpoint) */
+.morphL{d:path("M124,406 C262,400 391,392 503,379.5 C615,367 710,350 780,326 C870,288 900,140 960,140 C1030,140 1080,300 1150,406");stroke:#5F687E;transition:d 2s cubic-bezier(.65,0,.35,1) .6s,stroke 1.6s ease .8s}
+.r.on .morphL{d:path("M124,406 C230,394 270,330 320,252 C380,152 520,142 600,222 C660,292 700,330 880,338 C1040,345 1100,360 1150,406");stroke:#D5112A}
+.fix .fb,.fix .fc{opacity:0;transform-box:fill-box;transform-origin:center}
+.fix.go .fb{animation:fixBug 2s ease var(--fd) both}
+@keyframes fixBug{0%{opacity:0;transform:scale(.4)}12%{opacity:1;transform:scale(1.12)}20%,62%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.15)}}
+.fix.go .fc{animation:fixChk 1.5s ease calc(var(--fd) + .95s) both}
+@keyframes fixChk{0%{opacity:0;transform:scale(.3)}25%{opacity:1;transform:scale(1.15)}35%,75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.6)}}
+.btnp{transition:transform .12s ease;transform-box:fill-box;transform-origin:center}.btnp.down{transform:scale(.78)}
+#pressRing.ping{animation:ping .5s ease-out;transform-box:fill-box;transform-origin:center}
+@keyframes ping{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2.2)}}
+.envdot{fill:#FFA900;transition:fill .5s ease var(--vd)}.envdot.in{fill:#028EED}.envdot.real{fill:#00AD93}
+.unk{transition:opacity .5s ease}.unk.gone{opacity:0}
+.sweat{animation:sweat 1.35s ease-in infinite;transform-box:fill-box;transform-origin:center}
+@keyframes sweat{0%{opacity:0;transform:translateY(-4px) scale(.6)}20%{opacity:1;transform:none}80%{opacity:1;transform:translateY(16px)}100%{opacity:0;transform:translateY(22px)}}
+/* 尽早验证: a hand reaches down and flicks the real car away, then grabs the simulated car at the left and drags it into place (4.2 s) */
+.pushout.go{animation:carFlick 4.2s both}
+@keyframes carFlick{0%,11%{transform:none;animation-timing-function:cubic-bezier(.5,0,.9,.4)}26%,100%{transform:translateX(1400px) rotate(4deg)}}
+.pullin{opacity:0}.pullin.go{animation:simDrag 4.2s both}
+@keyframes simDrag{0%,29%{opacity:0;transform:translateX(-1150px)}32%{opacity:1;transform:translateX(-1150px);animation-timing-function:cubic-bezier(.45,0,.3,1)}64%,100%{opacity:1;transform:none}}
+.hand2{opacity:0}.hand2.go{animation:handMove 4.2s both}
+@keyframes handMove{
+  0%{opacity:1;transform:translate(640px,-300px);animation-timing-function:cubic-bezier(.2,.8,.3,1)}
+  8%{transform:translate(650px,440px);animation-timing-function:cubic-bezier(.6,0,.2,1)}
+  11%,16%{transform:translate(715px,430px);animation-timing-function:cubic-bezier(.45,0,.3,1)}
+  29%,32%{transform:translate(150px,300px);animation-timing-function:cubic-bezier(.45,0,.3,1)}
+  64%,68%{transform:translate(1300px,300px);animation-timing-function:cubic-bezier(.5,0,.8,.4)}
+  84%,100%{opacity:1;transform:translate(1300px,-420px)}}
+.hand2 .hp{animation:poseP 4.2s both}.hand2 .hg{opacity:0;animation:poseG 4.2s both}
+@keyframes poseP{0%,28%{opacity:1}29%,67%{opacity:0}68%,100%{opacity:1}}
+@keyframes poseG{0%,28%{opacity:0}29%,67%{opacity:1}68%,100%{opacity:0}}
+.cut{transition:opacity .6s ease}.cut.off{opacity:0;transition-delay:2.4s}.cut.late.off{transition-delay:3.4s}
+.kill{transition:opacity .9s ease,transform .9s cubic-bezier(.5,0,.75,0),filter .9s ease;transform-box:fill-box;transform-origin:center}.kill.off{opacity:0;transform:scale(.3);filter:grayscale(1);transition-delay:3.2s}
+.vn .bg{fill:#fff;stroke:#E0E2E8;transition:fill .6s ease var(--vd),stroke .6s ease var(--vd)}
+.vn .ic{stroke:rgba(95,104,126,.62);transition:stroke .6s ease var(--vd)}
+.vn .ck{opacity:0;transition:opacity .5s ease var(--vd)}
+.vn.ok .bg{fill:rgba(0,173,147,.1);stroke:#00AD93}.vn.ok .ic{stroke:#00AD93}.vn.ok .ck{opacity:1}
+.ripple{animation:ripple 1.8s cubic-bezier(.22,1,.36,1) infinite;transform-box:fill-box;transform-origin:center}
+@keyframes ripple{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(var(--sx,1.16),var(--sy,1.4))}}
+.dep{transition:opacity .9s ease 1.4s}.dep.less{opacity:.3}
+.meter{transition:width 1.2s cubic-bezier(.3,.8,.3,1) 1.4s}.meter.less{width:70px}
+.needle{transform-box:view-box;transform-origin:0 0;transform:rotate(-28deg);transition:transform 1.4s cubic-bezier(.5,0,.2,1.15) .8s}
+.needle.low{transform:rotate(-152deg)}
+.drive{transform:translateX(-1200px);transition:transform 1.6s cubic-bezier(.2,.8,.25,1)}.drive.go{transform:none}
+.roadflow{animation:roadflow .5s linear infinite}
+@keyframes roadflow{to{stroke-dashoffset:60}}
+.posts{animation:posts .9s linear infinite}
+@keyframes posts{to{transform:translateX(-200px)}}
+.bob{animation:bob .35s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(-3px)}}
+.sigw path{animation:sigw 1.2s ease-out infinite;opacity:0}
+@keyframes sigw{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+.spd{animation:spd .6s linear infinite}
+@keyframes spd{0%{transform:translateX(30px);opacity:0}40%{opacity:1}100%{transform:translateX(-40px);opacity:0}}
+.cycspin{animation:spin 2s linear infinite;transform-box:fill-box;transform-origin:center}
+.cycwrap.fast .cycspin{animation-duration:.9s}
+.bump{animation:bump .35s ease-out;transform-box:fill-box;transform-origin:center}
+@keyframes bump{0%{transform:scale(1.35)}100%{transform:scale(1)}}
+.code.run .cl{animation:typeline 1.8s ease-in-out infinite;transform-box:fill-box;transform-origin:left center}
+@keyframes typeline{0%{transform:scaleX(0)}45%,85%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:.2}}
+.sig{fill:none;stroke:#fff;stroke-width:5;stroke-linecap:round;stroke-dasharray:10 70;animation:sigflow 1.2s linear infinite}
+@keyframes sigflow{from{stroke-dashoffset:10}to{stroke-dashoffset:-70}}
+
+/* opening: clean white logo reveal */
+#stage.dark{background:#0B1B51}
+/* brand gradient (Black -> Blue 500 -> Primary Red, bands at 30deg) for the opening, agenda, chapter titles and ending */
+#grad{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;background:linear-gradient(150deg,#000 0%,#0B1B51 45%,#F62634 88%)}
+#stage.grad #grad{opacity:1}
+#stage.grad::before,#stage.grad #amb{opacity:0}
+#brand path{transition:fill .9s}
+#stage.grad #brand path{fill:#fff}
+.scene.g text[fill="#24262D"],.scene.g tspan[fill="#24262D"]{fill:#fff}
+.scene.g text[fill="rgba(246,38,52,.1)"]{fill:rgba(255,255,255,.1)}
+#stage.white{background:#fff}
+#hdr{transition:opacity .6s}
+#stage.dark #hdr,#stage.white #hdr{opacity:0}
+.ifade{animation:ifade 1.4s cubic-bezier(.2,.8,.2,1) .35s both;transform-box:fill-box;transform-origin:center}
+@keyframes ifade{from{opacity:0;transform:scale(.55);filter:blur(14px)}}
+.imove{animation:imove 1.5s cubic-bezier(.7,0,.2,1) 1.7s both}
+@keyframes imove{from{transform:translateX(-888px)}}
+.ilet{animation:ilet 1.3s cubic-bezier(.2,.8,.2,1) both;transform-box:fill-box;transform-origin:center}
+@keyframes ilet{from{opacity:0;transform:translateY(70px);filter:blur(12px)}}
+.isub{animation:isub 1.6s cubic-bezier(.2,.8,.2,1) 3.2s both}
+@keyframes isub{from{opacity:0;letter-spacing:70px}}
+/* topic line: the logo softly fades away and the title takes the centre on its own */
+.lg{transition:opacity .8s ease,transform 1s cubic-bezier(.2,.8,.2,1);transform-box:fill-box;transform-origin:center}
+.lg.up{opacity:0;transform:scale(.94)}
+.olet{animation:olIn 1s cubic-bezier(.22,1,.36,1) both}
+@keyframes olIn{from{opacity:0;filter:blur(12px)}}
+.ozoom{animation:ozoom 2.6s cubic-bezier(.45,0,.2,1) 2.4s forwards;transform-box:fill-box;transform-origin:center}
+@keyframes ozoom{to{transform:scale(1.4)}}
+
+/* MP4 export */
+body.rec #ctl,body.rec #bar{display:none}
+body.rec #wrap{bottom:0}
+body.rec,body.rec #stage{cursor:none}
+#recBox{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(11,27,81,.55);backdrop-filter:blur(6px);font-family:var(--fb)}
+#recBox .card{background:#fff;border-radius:22px;padding:34px 40px;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.25);color:#24262D;font-size:16px;line-height:1.7}
+#recBox h3{font-family:var(--ft);font-weight:500;font-size:24px;margin-bottom:12px}
+#recBox ol{margin:10px 0 22px 20px}
+#recBox button{font:inherit;font-size:17px;border:0;border-radius:12px;padding:11px 22px;cursor:pointer;margin-right:10px}
+#recBox .go{background:#D5112A;color:#fff}#recBox .no{background:#E0E2E8;color:#24262D}
+#recBox .msg{color:#D5112A;margin-top:12px;min-height:1.4em}
+
+/* controls */
+#ctl{position:fixed;left:0;right:0;bottom:0;height:64px;background:#24262D;color:#E0E2E8;display:flex;align-items:center;gap:10px;padding:0 16px;font-size:14px;user-select:none}
+#ctl button{background:#24262D;color:#E0E2E8;border:1px solid #3C4655;border-radius:8px;height:38px;min-width:38px;padding:0 10px;font-size:16px;cursor:pointer}
+#ctl button:hover{background:#3C4655}
+#ctl button.main{background:#D5112A;border-color:#D5112A;min-width:52px}
+#prog{flex:1;height:10px;background:#3C4655;border-radius:5px;position:relative;cursor:pointer}
+#prog i{position:absolute;left:0;top:0;bottom:0;background:#D5112A;border-radius:5px}
+#prog b{position:absolute;top:-4px;width:2px;height:18px;background:rgba(95,104,126,.62)}
+#time{font-variant-numeric:tabular-nums;min-width:110px;text-align:center}
+#ctl select,#ctl label{background:#24262D;color:#E0E2E8;border:1px solid #3C4655;border-radius:8px;height:38px;padding:0 8px;display:flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <div id="grad"></div>
+  <div id="amb"><i></i><i></i><i></i></div>
+  <div id="hdr"><div id="chap"></div><div id="brand"></div></div>
+  <div id="scn"></div>
+  <div id="sub"><span></span></div>
+  <div id="bar"></div>
+</div></div>
+<div id="ctl">
+  <button id="bPS" title="上一场景 (↑ / PgUp)">⏮</button>
+  <button id="bP" title="上一句 (←)">‹</button>
+  <button id="bPlay" class="main" title="播放 / 暂停 (空格)">▶</button>
+  <button id="bN" title="下一句 (→)">›</button>
+  <button id="bNS" title="下一场景 (↓ / PgDn)">⏭</button>
+  <div id="prog"><i></i></div>
+  <span id="time">0:00 / 0:00</span>
+  <select id="spd" title="速度"><option value="0.75">0.75×</option><option value="1">1×</option><option value="1.1" selected>1.1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option></select>
+  <label title="录制的旁白 (N)"><input type="checkbox" id="narr" checked> 旁白</label>
+  <label title="人声美化：更温暖、更有磁性 (B)"><input type="checkbox" id="vpol" checked> 美化</label>
+  <label title="使用浏览器语音朗读字幕 (V)"><input type="checkbox" id="voice"> 朗读</label>
+  <label title="背景音乐 (M)"><input type="checkbox" id="bgm" checked> 音乐</label>
+  <label title="音效 (S)"><input type="checkbox" id="sfx" checked> 音效</label>
+  <button id="bClean" title="隐藏控件，便于录屏 (H)">隐藏控件</button>
+  <button id="bFull" title="全屏 (F)">全屏</button>
+  <button id="bRec" class="main" title="录制整片并导出 1080p MP4">导出MP4</button>
+</div>
+
+<svg width="0" height="0" style="position:absolute"><defs id="defs"></defs></svg>
+
+<script>
+const C={red:'#D5112A',redL:'rgba(246,38,52,.1)',dark:'#24262D',gray:'#5F687E',mute:'rgba(95,104,126,.62)',line:'#E0E2E8',light:'rgba(224,226,232,.5)',
+  blue:'#028EED',blueL:'rgba(2,142,237,.1)',green:'#00AD93',greenL:'rgba(0,173,147,.1)',amber:'#FFA900',amberL:'rgba(255,169,0,.1)',orange:'#FA5146'};
+document.getElementById('defs').innerHTML=['red','dark','gray','blue','green','orange','amber'].map(k=>
+  `<marker id="ah-${k}" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="24" markerHeight="24" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${C[k]}"/></marker>`).join('');
+
+/* ---------- drawing helpers ---------- */
+const tw=(s,z)=>{let w=0;for(const ch of s)w+=/[\x00-\xff]/.test(ch)?z*.56:z;return w};
+const R=(at,inner,fx='up',o={})=>`<g class="r ${fx}" data-at="${at}"${o.out!=null?` data-out="${o.out}"`:''} style="transition-delay:${o.d||0}s;--d:${o.d||0}s">${inner}</g>`;
+const T=(x,y,s,o={})=>{const z=o.size||36,ls=String(s).split('\n'),lh=z*1.3;
+  const tt=(o.w||400)>=600;
+  return `<text${tt?' class="tt"':''} x="${x}" y="${y}" font-size="${z}" fill="${o.fill||C.dark}" font-weight="${tt?500:400}" text-anchor="${o.a==='start'?'start':o.a==='end'?'end':'middle'}" dominant-baseline="central"${o.ls?` letter-spacing="${o.ls}"`:''}>${ls.map((l,i)=>`<tspan x="${x}" dy="${i?lh:-(ls.length-1)/2*lh}">${l}</tspan>`).join('')}</text>`};
+const B=(x,y,w,h,o={})=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.rx??18}" fill="${o.fill||'#fff'}" stroke="${o.stroke||C.line}" stroke-width="${o.sw||3}"${o.dash?' stroke-dasharray="14 10"':''}${(o.fill||'#fff')==='#fff'||o.cls?` class="${(o.fill||'#fff')==='#fff'?'card ':''}${o.cls||''}"`:''}${o.add?` data-add="${o.add}"`:''}/>`
+  +(o.t?T(x+w/2,y+h/2-(o.s?20:0),o.t,{size:o.ts||38,w:700,fill:o.tc||C.dark}):'')
+  +(o.s?T(x+w/2,y+h/2+28,o.s,{size:o.ss||26,fill:o.sc||C.gray}):'');
+const A=(d,o={})=>{const c=o.c||'dark';
+  return `<path d="${d}"${o.flow?' class="flow"':o.dash?' class="dashline"':' class="dr" pathLength="1"'} fill="none" stroke="${C[c]}" stroke-width="${o.sw||5}" stroke-linecap="round" stroke-linejoin="round"${o.noHead?'':` marker-end="url(#ah-${c})"`}${o.both?` marker-start="url(#ah-${c})"`:''}/>`};   // both: two-way arrow
+const L=(d,o={})=>A(d,{...o,noHead:1});
+const P=(x,y,s,o={})=>{const z=o.size||30,h=z*1.9,w=tw(s,z)+z*1.6;
+  return `<rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="${h/2}" fill="${o.fill||C.light}" stroke="${o.stroke||'none'}" stroke-width="3"/>`+T(x,y,s,{size:z,w:700,fill:o.c||C.dark})};
+const g=(x,y,inner,s=1)=>`<g transform="translate(${x},${y})${s!==1?` scale(${s})`:''}">${inner}</g>`;
+const wv=(x0,y0,w,a,cyc,n=0)=>{let d='';for(let i=0;i<=80;i++){const t=i/80;const v=Math.sin(t*cyc*2*Math.PI)+n*Math.sin(t*cyc*7.3)+n*.6*Math.sin(t*cyc*13.1+1);d+=(i?'L':'M')+(x0+t*w).toFixed(1)+','+(y0-a*v).toFixed(1)}return d};
+const star=(R1,r,n)=>{let d='';for(let i=0;i<n*2;i++){const a=i*Math.PI/n,rr=i%2?r:R1;d+=(i?'L':'M')+(Math.cos(a)*rr).toFixed(1)+','+(Math.sin(a)*rr).toFixed(1)}return d+'Z'};
+
+const ecu=(x,y,o={})=>{const s=o.s||1;
+  const pins=[-60,-30,0,30,60].map(p=>`<rect x="${p-6}" y="-84" width="12" height="22" rx="3" fill="rgba(95,104,126,.62)"/><rect x="${p-6}" y="62" width="12" height="22" rx="3" fill="rgba(95,104,126,.62)"/>`).join('');
+  return g(x,y,`${pins}<rect x="-100" y="-66" width="200" height="132" rx="16" fill="${o.fill||C.dark}"${o.stroke?` stroke="${o.stroke}" stroke-width="6"`:''}/><rect x="-40" y="-40" width="80" height="80" rx="10" fill="#3C4655" stroke="#5F687E" stroke-width="3"/>${T(0,0,o.icon||'ECU',{size:o.icon?44:24,fill:'#fff',w:800})}`,s)
+   +(o.label?T(x,y+86*s+32,o.label,{size:o.lz||32,w:700,fill:o.lc||C.dark}):'')+(o.sub?T(x,y+86*s+74,o.sub,{size:26,fill:C.gray}):'')};
+/* bare hardware: a circuit board with an unlabeled chip, traces and a few components */
+/* board traces, all starting at the chip and running outward */
+const pcbTraces=()=>[-30,-15,0,15,30].flatMap(p=>[`M${p},-48 V${p%30?-62:-72} H${p*2.6}`,`M${p},48 V${p%30?62:72} H${p*2.6}`])
+  .concat(['M-48,-15 H-80 V-40 H-105','M-48,15 H-90 V40','M48,0 H95 V-30','M48,-30 H70']);
+const pcb=(x,y,s=1)=>{const pins=[-30,-15,0,15,30];
+  return g(x,y,`<rect x="-140" y="-95" width="280" height="190" rx="14" fill="#00AD93"/>`
+   +[[-122,-77],[122,-77],[-122,77],[122,77]].map(([cx,cy])=>`<circle cx="${cx}" cy="${cy}" r="8" fill="#fff" stroke="#3C4655" stroke-width="3"/>`).join('')
+   +`<g stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".55">`
+   +pcbTraces().map(d=>`<path d="${d}"/>`).join('')+`</g>`
+   +pins.map(p=>`<rect x="${p-4}" y="-56" width="8" height="12" fill="#E0E2E8"/><rect x="${p-4}" y="44" width="8" height="12" fill="#E0E2E8"/><rect x="-56" y="${p-4}" width="12" height="8" fill="#E0E2E8"/><rect x="44" y="${p-4}" width="12" height="8" fill="#E0E2E8"/>`).join('')
+   +`<rect x="-46" y="-46" width="92" height="92" rx="8" fill="#24262D"/><circle cx="-30" cy="-30" r="5" fill="#5F687E"/>`
+   +`<rect x="78" y="44" width="34" height="16" rx="3" fill="#FFA900"/><rect x="78" y="20" width="34" height="16" rx="3" fill="#FFA900"/>`
+   +`<circle cx="-95" cy="20" r="13" fill="#3C4655"/><circle cx="-95" cy="20" r="6" fill="#E0E2E8"/><rect x="-112" y="44" width="30" height="20" rx="3" fill="#24262D"/>`,s)};
+/* other controllers on the network: same board look as the SUT, but static and simplified (board, chip, corner holes) */
+const pcbMini=(x,y,s=1)=>g(x,y,`<rect x="-140" y="-95" width="280" height="190" rx="18" fill="#00AD93"/>`
+  +[[-118,-73],[118,-73],[-118,73],[118,73]].map(([cx,cy])=>`<circle cx="${cx}" cy="${cy}" r="9" fill="#fff"/>`).join('')
+  +[-24,0,24].map(p=>`<rect x="${p-5}" y="-62" width="10" height="14" rx="2" fill="#fff"/><rect x="${p-5}" y="48" width="10" height="14" rx="2" fill="#fff"/><rect x="-62" y="${p-5}" width="14" height="10" rx="2" fill="#fff"/><rect x="48" y="${p-5}" width="14" height="10" rx="2" fill="#fff"/>`).join('')
+  +`<rect x="-48" y="-48" width="96" height="96" rx="12" fill="#24262D"/>`,s);
+/* the SUT as it looks at the end of the SUT scene: board + code window on the chip, running (typing code, signal pulses, blinking LED) */
+const sut=(x,y,s=1)=>g(x,y,pcb(0,0,1)
+  +pcbTraces().map((d,i)=>`<path class="sig" style="animation-delay:${(-(i%5)*.24).toFixed(2)}s" d="${d}"/>`).join('')
+  +`<g transform="scale(.3)"><rect x="-180" y="-130" width="360" height="260" rx="18" fill="#24262D"/>`
+  +[0,1,2].map(i=>`<circle cx="${-150+i*24}" cy="-104" r="7" fill="${['#FA5146','#FFA900','#00AD93'][i]}"/>`).join('')
+  +`<g class="code run">`+[[-140,-60,180,'#33D3FF'],[-110,-20,220,'#9B46EA'],[-110,20,150,'#00AD93'],[-140,60,240,'#FFA900'],[-110,100,120,'#33D3FF']].map(([bx,by,w,c],i)=>`<rect class="cl" style="animation-delay:${(i*.25).toFixed(2)}s" x="${bx}" y="${by-8}" width="${w}" height="16" rx="8" fill="${c}"/>`).join('')+`</g></g>`
+  +`<circle class="led" cx="100" cy="-78" r="9" fill="#95C33E"/>`,s);
+const CARBODY='M-200,30 L-200,-8 Q-196,-30 -160,-36 L-105,-42 L-55,-88 L75,-88 L140,-42 L182,-32 Q200,-26 200,0 L200,30 Z',CARWIN='M-88,-42 L-48,-76 L2,-76 L2,-42 Z M18,-42 L18,-76 L70,-76 L118,-42 Z';
+/* simulation model: a monitor whose screen shows the simulated car (blue dashed outline, as in the 尽早验证 scene) */
+const simCar=(x,y,s)=>`<g transform="translate(${x},${y}) scale(${s})" fill="none" stroke="${C.blue}" stroke-width="${(3/s).toFixed(1)}" stroke-dasharray="${(8/s).toFixed(1)} ${(5.5/s).toFixed(1)}" stroke-linejoin="round"><path d="${CARBODY}" fill="#fff"/><path d="${CARWIN}"/>${[-118,118].map(cx=>`<circle cx="${cx}" cy="32" r="30" fill="#fff"/>`).join('')}</g>`;
+const simModel=(x,y)=>g(x,y,`<rect x="-118" y="-88" width="236" height="160" rx="16" fill="#24262D"/><rect x="-104" y="-74" width="208" height="132" rx="8" fill="${C.blueL}"/>`
+  +simCar(0,-2,.42)+`<rect x="-12" y="72" width="24" height="22" fill="#3C4655"/><rect x="-56" y="92" width="112" height="12" rx="6" fill="#3C4655"/>`);
+/* a clean cartoon hand (white glove with dark outline, no arm), fingertip at (0,0):
+   .hp pointing down (flick / release), .hg closed grab */
+const HAND2=(()=>{const st='fill="#fff" stroke="#24262D" stroke-width="4" stroke-linejoin="round"';
+  const point=`<g transform="rotate(180)"><rect x="-9" y="-2" width="18" height="48" rx="9" ${st}/>`
+    +`<path d="M-9,34 Q-9,26 -2,26 L30,26 Q40,26 40,38 L40,64 Q40,84 20,84 L4,84 Q-14,84 -18,66 L-24,50 Q-27,41 -19,39 Q-12,38 -9,46 Z" ${st}/>`
+    +`<path d="M9,27 V40 M21,27 V42 M31,29 V42" stroke="#24262D" stroke-width="3" stroke-linecap="round"/></g>`;
+  const grab=`<path d="M-30,-58 Q-30,-70 -18,-70 L18,-70 Q30,-70 30,-58 L30,-14 Q30,6 10,6 L-10,6 Q-30,6 -30,-14 Z" ${st}/>`
+    +`<path d="M-15,-6 V6 M0,-6 V6 M15,-6 V6" stroke="#24262D" stroke-width="3" stroke-linecap="round"/>`
+    +`<path d="M-30,-40 Q-44,-40 -42,-24 Q-40,-12 -26,-14" ${st}/>`;
+  return `<g transform="scale(1.5)" style="filter:drop-shadow(0 6px 10px rgba(36,38,45,.18))"><g class="hp">${point}</g><g class="hg">${grab}</g></g>`})();
+const car=(x,y,o={})=>{const gh=o.ghost,st=gh?`fill="none" stroke="${C.mute}" stroke-width="4" stroke-dasharray="12 9"`:`fill="${o.fill||C.red}"`,wh=gh?st:`fill="${C.dark}"`;
+  return g(x,y,`<path d="M-200,30 L-200,-8 Q-196,-30 -160,-36 L-105,-42 L-55,-88 L75,-88 L140,-42 L182,-32 Q200,-26 200,0 L200,30 Z" ${st}/>`
+   +(gh?'':`<path d="M-88,-42 L-48,-76 L2,-76 L2,-42 Z M18,-42 L18,-76 L70,-76 L118,-42 Z" fill="#fff"/>`)
+   +`<circle cx="-118" cy="32" r="30" ${wh}/><circle cx="118" cy="32" r="30" ${wh}/>`
+   +(gh?'':`<circle cx="-118" cy="32" r="11" fill="#E0E2E8"/><circle cx="118" cy="32" r="11" fill="#E0E2E8"/>`),o.s||1)};
+const thermo=(x,y)=>g(x,y,`<rect x="-24" y="-250" width="48" height="290" rx="24" fill="#fff" stroke="${C.line}" stroke-width="4"/>`
+  +[0,1,2,3,4,5,6].map(i=>`<line x1="28" x2="42" y1="${-i*35+5}" y2="${-i*35+5}" stroke="${C.mute}" stroke-width="3"/>`).join('')
+  +`<rect id="merc" x="-12" y="-176" width="24" height="206" rx="12" fill="${C.red}"/><circle cy="58" r="44" fill="${C.red}"/>`);
+const sun=(x,y)=>g(x,y,`<g class="spin"><circle r="112" fill="none"/>${Array.from({length:12},(_,i)=>{const a=i*Math.PI/6;return `<line x1="${(Math.cos(a)*80).toFixed(1)}" y1="${(Math.sin(a)*80).toFixed(1)}" x2="${(Math.cos(a)*108).toFixed(1)}" y2="${(Math.sin(a)*108).toFixed(1)}" stroke="#FFA900" stroke-width="9" stroke-linecap="round"/>`}).join('')}</g><circle r="62" fill="#FFA900"/>`);
+const fan=(x,y,r)=>g(x,y,`<circle r="${r}" fill="${C.blueL}" stroke="${C.blue}" stroke-width="5"/><g class="spin fast"><circle r="${r*.85}" fill="none"/>${[0,120,240].map(a=>`<ellipse cy="${-r*.42}" rx="${r*.17}" ry="${r*.4}" fill="${C.blue}" transform="rotate(${a})"/>`).join('')}</g><circle r="${r*.12}" fill="${C.dark}"/>`);
+const person=(x,y,s=1,c=C.dark)=>g(x,y,`<circle cy="-58" r="26" fill="${c}"/><path d="M-46,40 Q-46,-22 0,-22 Q46,-22 46,40 Z" fill="${c}"/>`,s);
+/* friendly colour versions for the air-con story: a driver with skin tone and an indigo shirt, a light touch panel,
+   and a light controller chip with a blue core */
+const driver=(x,y,s=1)=>g(x,y,`<path d="M-46,40 Q-46,-22 0,-22 Q46,-22 46,40 Z" fill="#433FC3"/><circle cy="-58" r="26" fill="#433FC3"/>`,s);   // abstract pictogram person
+const panelLight=(x,y)=>g(x,y,`<rect class="card" x="-130" y="-100" width="260" height="200" rx="22" fill="#fff" stroke="${C.line}" stroke-width="3"/><rect x="-108" y="-80" width="216" height="110" rx="14" fill="${C.blueL}"/>`
+  +T(0,-58,'设定温度',{size:22,fill:C.gray})+T(0,-12,'22°C',{size:56,w:800,fill:C.blue})
+  +`<circle cx="-50" cy="62" r="20" fill="${C.light}" stroke="${C.line}" stroke-width="2"/><circle cx="50" cy="62" r="20" fill="${C.light}" stroke="${C.line}" stroke-width="2"/>`
+  +T(-50,60,'−',{size:30,fill:C.dark})+T(50,60,'+',{size:30,fill:C.dark}))+T(x,y+140,'空调控制面板',{size:30,w:700});
+const ecuLight=(x,y,label)=>g(x,y,[-60,-30,0,30,60].map(p=>`<rect x="${p-6}" y="-84" width="12" height="22" rx="3" fill="rgba(95,104,126,.62)"/><rect x="${p-6}" y="62" width="12" height="22" rx="3" fill="rgba(95,104,126,.62)"/>`).join('')
+  +`<rect class="card" x="-100" y="-66" width="200" height="132" rx="18" fill="#fff" stroke="${C.blue}" stroke-width="5"/><rect x="-40" y="-40" width="80" height="80" rx="14" fill="${C.blue}"/>`+T(0,0,'❄',{size:44,fill:'#fff',w:800}))
+  +T(x,y+118,label,{size:32,w:700});
+/* the air-con chain as one consistent icon set: every step is a pastel rounded tile with a duotone icon and a label */
+const tile=(x,y,bg,inner,label)=>g(x,y,`<rect class="card" x="-92" y="-92" width="184" height="184" rx="40" fill="${bg}"/>`+inner)+T(x,y+128,label,{size:30,w:700});
+/* panel display shows #setT (set by the scene hook); the − button (#btnMinus) gets pressed to lower the set temperature */
+const icoPanel=`<rect x="-62" y="-50" width="124" height="74" rx="14" fill="#fff" stroke="#00AD93" stroke-width="4"/><text id="setT" class="tt" x="0" y="-13" font-size="34" font-weight="500" fill="#00AD93" text-anchor="middle" dominant-baseline="central">28°C</text>`
+  +`<circle id="pressRing" cx="-24" cy="48" r="13" fill="none" stroke="#00AD93" stroke-width="3" opacity="0"/>`
+  +`<g id="btnMinus" class="btnp"><circle cx="-24" cy="48" r="13" fill="#00AD93"/>`+T(-24,47,'−',{size:22,w:800,fill:'#fff'})+`</g>`
+  +`<circle cx="24" cy="48" r="13" fill="#00AD93"/>`+T(24,47,'+',{size:22,w:800,fill:'#fff'});
+const icoChip=[-36,-12,12,36].map(p=>`<rect x="${p-5}" y="-62" width="10" height="16" rx="3" fill="rgba(246,38,52,.42)"/><rect x="${p-5}" y="46" width="10" height="16" rx="3" fill="rgba(246,38,52,.42)"/>`).join('')
+  +`<rect x="-58" y="-48" width="116" height="96" rx="16" fill="#fff" stroke="${C.red}" stroke-width="5"/><rect x="-26" y="-26" width="52" height="52" rx="10" fill="${C.red}"/>`+T(0,0,'❄',{size:32,fill:'#fff',w:800});
+const panel=(x,y)=>g(x,y,`<rect x="-130" y="-100" width="260" height="200" rx="20" fill="${C.dark}"/><rect x="-108" y="-80" width="216" height="110" rx="10" fill="#24262D"/>${T(0,-58,'设定温度',{size:22,fill:'rgba(224,226,232,.7)'})}${T(0,-12,'22°C',{size:56,w:800,fill:'#00AD93'})}<circle cx="-50" cy="62" r="20" fill="#3C4655"/><circle cx="50" cy="62" r="20" fill="#3C4655"/>${T(-50,60,'−',{size:30,fill:'#fff'})}${T(50,60,'+',{size:30,fill:'#fff'})}`)+T(x,y+140,'空调控制面板',{size:30,w:700});
+/* mark a drawn icon with the effect it makes when it appears */
+const sfxTag=(name,svg)=>svg.replace('<g ',`<g data-sfx="${name}" `);
+const check=(x,y,r=22,c=C.green)=>sfxTag("ok",g(x,y,`<circle r="${r}" fill="${c}"/><path d="M${-r*.42},0 L${-r*.1},${r*.32} L${r*.45},${-r*.34}" fill="none" stroke="#fff" stroke-width="${r*.2}" stroke-linecap="round" stroke-linejoin="round"/>`));
+const cross=(x,y,r=22,c=C.red)=>sfxTag("no",g(x,y,`<circle r="${r}" fill="${c}"/><path d="M${-r*.35},${-r*.35} L${r*.35},${r*.35} M${r*.35},${-r*.35} L${-r*.35},${r*.35}" stroke="#fff" stroke-width="${r*.2}" stroke-linecap="round"/>`));
+const warn=(x,y,s=1)=>sfxTag("alert",g(x,y,`<path d="M0,-70 L72,56 L-72,56 Z" fill="${C.amber}" stroke="${C.amber}" stroke-width="14" stroke-linejoin="round"/>${T(0,14,'!',{size:80,w:800,fill:'#fff'})}`,s));
+const bug=(x,y,s=1,c=C.red)=>sfxTag("bug",g(x,y,`<path d="M-22,-8 L-44,-20 M-22,8 L-46,8 M-20,22 L-40,38 M22,-8 L44,-20 M22,8 L46,8 M20,22 L40,38 M-6,-44 L-16,-60 M6,-44 L16,-60" stroke="${c}" stroke-width="5" stroke-linecap="round" fill="none"/><ellipse rx="24" ry="32" cy="6" fill="${c}"/><circle cy="-34" r="13" fill="${c}"/><path d="M0,-22 V38" stroke="#fff" stroke-width="3" opacity=".6"/>`,s));
+const shield=(x,y,s=1,f=C.redL,st=C.red)=>g(x,y,`<path d="M0,-92 L78,-62 L78,8 Q78,72 0,102 Q-78,72 -78,8 L-78,-62 Z" fill="${f}" stroke="${st}" stroke-width="${(6/s).toFixed(1)}"/>`,s);
+const doc=(x,y)=>g(x,y,`<path d="M-70,-95 H40 L75,-60 V95 H-70 Z" fill="#fff" stroke="${C.dark}" stroke-width="5" stroke-linejoin="round"/><path d="M40,-95 V-60 H75" fill="none" stroke="${C.dark}" stroke-width="5"/>${[-30,0,30,60].map(v=>`<line x1="-45" x2="${v===60?10:50}" y1="${v}" y2="${v}" stroke="${C.mute}" stroke-width="7" stroke-linecap="round"/>`).join('')}<line x1="-45" x2="10" y1="-62" y2="-62" stroke="${C.red}" stroke-width="9" stroke-linecap="round"/>`);
+const iter=(x,y,r=60)=>g(x,y,`<g class="spin"><circle r="${r+16}" fill="none"/><path d="M${r},0 A${r},${r} 0 0 1 ${-r*.5},${(r*.866).toFixed(1)}" fill="none" stroke="${C.red}" stroke-width="12" stroke-linecap="round" marker-end="url(#ah-red)"/><path d="M${-r},0 A${r},${r} 0 0 1 ${r*.5},${(-r*.866).toFixed(1)}" fill="none" stroke="${C.red}" stroke-width="12" stroke-linecap="round" marker-end="url(#ah-red)"/></g>`);
+const boom=(x,y)=>sfxTag("boom",g(x,y,`<circle cx="-50" cy="-30" r="150" fill="rgba(95,104,126,.62)" opacity=".5"/><circle cx="70" cy="-60" r="120" fill="#5F687E" opacity=".45"/><path d="${star(150,80,12)}" fill="#FA5146"/><circle r="90" fill="#FA5146"/><circle r="58" fill="#FFA900"/><circle r="28" fill="#fff"/>`));
+const rocket=()=>`<path d="M-34,-70 L-72,-14 L-72,0 L-34,-24 Z M34,-70 L72,-14 L72,0 L34,-24 Z" fill="${C.red}"/><rect x="-34" y="-240" width="68" height="220" rx="6" fill="#fff" stroke="${C.dark}" stroke-width="5"/><path d="M-34,-240 Q0,-330 34,-240 Z" fill="${C.red}" stroke="${C.dark}" stroke-width="5" stroke-linejoin="round"/><rect x="-34" y="-150" width="68" height="18" fill="${C.dark}"/><circle cy="-195" r="14" fill="${C.blueL}" stroke="${C.dark}" stroke-width="4"/><path d="M-22,-20 L-28,0 H28 L22,-20 Z" fill="${C.dark}"/>`;
+const sensor=(x,y)=>g(x,y,`<rect x="-36" y="-30" width="56" height="60" rx="10" fill="${C.dark}"/><circle cx="-8" r="14" fill="${C.blueL}"/><path d="M34,-26 Q52,0 34,26 M50,-40 Q76,0 50,40" fill="none" stroke="${C.blue}" stroke-width="6" stroke-linecap="round"/>`);
+const battery=(x,y)=>g(x,y,`<rect x="-60" y="-36" width="112" height="72" rx="10" fill="#fff" stroke="${C.dark}" stroke-width="6"/><rect x="52" y="-14" width="12" height="28" rx="3" fill="${C.dark}"/><rect x="-50" y="-26" width="70" height="52" rx="5" fill="${C.green}"/>`);
+const cube=(x,y,s=1)=>g(x,y,`<path d="M0,-80 L80,-40 L0,0 L-80,-40 Z" fill="#7D8FDE" stroke="${C.blue}" stroke-width="4" stroke-linejoin="round"/><path d="M-80,-40 L0,0 L0,90 L-80,50 Z" fill="rgba(2,142,237,.1)" stroke="${C.blue}" stroke-width="4" stroke-linejoin="round"/><path d="M80,-40 L0,0 L0,90 L80,50 Z" fill="#33D3FF" stroke="${C.blue}" stroke-width="4" stroke-linejoin="round"/>`,s);
+const brake=(x,y)=>g(x,y,`<circle r="75" fill="#E0E2E8" stroke="${C.dark}" stroke-width="6"/>${[0,72,144,216,288].map(a=>`<circle cx="${(Math.cos(a*Math.PI/180)*50).toFixed(1)}" cy="${(Math.sin(a*Math.PI/180)*50).toFixed(1)}" r="7" fill="${C.mute}"/>`).join('')}<circle r="24" fill="${C.dark}"/><rect x="40" y="-66" width="42" height="74" rx="12" fill="${C.red}"/>`);
+const wheel=(x,y)=>g(x,y,`<circle r="70" fill="none" stroke="${C.dark}" stroke-width="16"/><path d="M-20,0 H-66 M20,0 H66 M0,20 V66" stroke="${C.dark}" stroke-width="13" stroke-linecap="round"/><circle r="24" fill="${C.red}"/>`);
+const bolt=(x,y)=>g(x,y,`<circle r="75" fill="${C.amberL}" stroke="${C.amber}" stroke-width="6"/><path d="M12,-52 L-32,8 H-2 L-14,56 L34,-10 H4 Z" fill="${C.amber}"/>`);
+const bubble=(x,y)=>g(x,y,`<path d="M-60,-45 H60 Q80,-45 80,-25 V20 Q80,40 60,40 H-10 L-40,66 L-35,40 H-60 Q-80,40 -80,20 V-25 Q-80,-45 -60,-45 Z" fill="${C.red}"/>${[-30,0,30].map(c=>`<circle cx="${c}" cy="-3" r="8" fill="#fff"/>`).join('')}`);
+
+const chapter=(n,title,en)=>
+  R(0,T(960,250,n,{size:220,w:800,fill:C.redL}),'pop')+
+  R(0,T(960,410,title,{size:96,w:800}),'up',{d:.25})+
+  R(0,`<path d="M780,510 H1140" class="dr" pathLength="1" stroke="${C.red}" stroke-width="8" stroke-linecap="round"/>`,'draw',{d:.5});
+const bh=(n,title)=>R(0,`<circle cx="110" cy="70" r="44" fill="${C.red}"/>`+T(110,72,n,{size:46,w:800,fill:'#fff'})+T(180,70,title,{a:'start',size:52,w:800}),'left');
+/* test-effort chart: effort over 需求&设计 / 开发 / 测试 / 发布; TRAD peaks late (traditional strategy), LEFT peaks early (shift-left) */
+const axis=()=>A('M120,410 V70',{sw:5})+A('M120,410 H1185',{sw:5})+T(140,82,'测试工作量',{a:'start',size:28,w:700})
+  +[['需求&设计',230],['开发',480],['测试',900],['发布',1090]].map(([t,x])=>T(x,445,t,{size:26})).join('');
+const TRAD='M124,406 C400,394 640,374 780,326 C870,288 900,140 960,140 C1030,140 1080,300 1150,406 Z';
+const LEFT='M124,406 C230,394 270,330 320,252 C380,152 520,142 600,222 C660,292 700,330 880,338 C1040,345 1100,360 1150,406';
+
+/* opening: clean white Vector logo reveal */
+const VLOGO=['M0,18 H64 L130,135 L194,18 H259 L130,247 Z',
+  'M332,18 H506 V68 H388 V103 H480 V152 H388 V191 H506 V242 H332 Z',
+  'M785,46 A118,118 0 1 0 785,213 L745,174 A62,62 0 1 1 745,85 Z',
+  'M831,18 H1038 V68 H962 V242 H906 V68 H831 Z',
+  'M1195,12 A118,118 0 1 1 1194.9,12 Z M1195,68 A62,62 0 1 0 1195.1,68 Z',
+  'M1394,18 H1535 A75,75 0 0 1 1560,162 L1607,242 H1543 L1499,167 H1450 V242 H1394 Z M1450,68 V118 H1526 A25,25 0 0 0 1526,68 Z'];
+const VCHEV='M1776,0 L2000,130 L1776,260 V195 L1887,130 L1776,65 Z';
+document.getElementById('brand').innerHTML=`<svg viewBox="0 0 2000 260">${[...VLOGO,VCHEV].map(d=>`<path d="${d}" fill="#F62634" fill-rule="evenodd"/>`).join('')}</svg>`;
+function intro(){
+  const red='#F62634';
+  return `<g class="lg" data-add="1 up">
+    <g transform="translate(460,265) scale(.5)">
+      ${VLOGO.map((d,i)=>`<path class="ilet" d="${d}" fill="#fff" fill-rule="evenodd" style="animation-delay:${(2.2+i*.1).toFixed(2)}s"/>`).join('')}
+      <g class="imove"><path class="ifade" d="${VCHEV}" fill="#fff"/></g>
+    </g>
+    <text class="tt isub" x="960" y="478" font-size="64" font-weight="500" fill="#24262D" letter-spacing="28" text-anchor="middle" dominant-baseline="central">好奇号</text>
+  </g>`
+  +R(1,`<text class="tt" x="960" y="400" font-size="120" font-weight="500" fill="#24262D" text-anchor="middle" dominant-baseline="central">什么是 <tspan fill="${red}">HIL</tspan> 测试？</text>`,'up',{d:.6});
+}
+
+/* closing: the Vector logo (centred) fades in like the intro, then slowly zooms in and stays */
+function outro(){
+  const red='#F62634';
+  return `<g class="ozoom"><g transform="translate(460,335) scale(.5)">
+      ${[...VLOGO,VCHEV].map((d,i)=>`<path class="olet" d="${d}" fill="#fff" fill-rule="evenodd" style="animation-delay:${(.2+i*.07).toFixed(2)}s"/>`).join('')}
+    </g></g>`;
+}
+
+/* QR codes for the ending (embedded so the page stays a single file) */
+const QR0='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQgAAAEIAQAAAACLjVdSAAABqklEQVR4nO1Ywa7DMAjDUf//l/0EhnTvtNMoWpZWU5ty8CwbCKC9WetdgP0ivpePywx6cqGAsLh57x7Hh4Vl4GTQiCSidg/kwxD/npBWJJTaHYN0tUcwaBATT+IYEgHpAjDKLA/heN4vjEcGGfScWkLpw7GGRBhLCi6K16s+H6cP5iNdIWEavbXiWHMikJelZVRpghbMQtoTQVeFEqkvucWzatyTkDZFMKwSJLhAqtxCvdkkpJ+PgNrQ6MGsevYgp/anIF1tEYgcspswN09IQ/ckpE1+wdaJRTP2cpqbhbQrgsEJvWFXEs2DHY6st1B9oaRSVUbvo5B2RUAOwVaKAWWgWUhb+g9zNphVN9dddgYh7am3iISRRRZqUPcIhCf2p6azCz2VaABSDTuP1IdpZGpqw6JT9W8chXS1ROCe/CCVIn40XD7OL9c9X2eODEMqO7Gcx4dVZQX3SLkOMMflD4s6q6Jre0iYvzxvPrbuR4ZdjAyZ5Il3JNIP+yUXsrKEVyqFzEG6+iKYuZSZW6P2+uZ584+rbFH6sJwqiwzw3P5jONL1i/i3eurtH5KhwvnwCA8bAAAAAElFTkSuQmCC';   // Vector学习路线图 (no logo of its own; a small badge is drawn over its centre, within its error-correction margin)
+const QR1='data:image/png;base64,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',QR2='data:image/png;base64,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';
+
+/* ---------- scenes ---------- */
+const scenes=[
+{ch:'开场',white:true,grad:2,lead:3,sfx:[[0,.3,'swell'],[0,2.2,'logo']],cues:['大家好，欢迎来到Vector好奇号','本期视频的主题为：什么是HIL测试'],svg:intro()},
+
+{ch:'本期内容',grad:1,cues:['在本期视频中，我们将依次介绍什么是HIL测试','探讨为什么要进行HIL测试','分析HIL测试与黑盒测试之间的区别和联系','并说明HIL测试存在的局限'],svg:
+ ['什么是\nHIL测试','为什么要\n进行HIL测试','HIL测试与\n黑盒测试','HIL测试\n存在的局限'].map((t,i)=>{const x=150+i*420;
+  return R(i,B(x,170,360,440,{rx:24})+`<rect x="${x}" y="170" width="360" height="12" rx="6" fill="${C.red}"/>`+T(x+180,280,'0'+(i+1),{size:90,w:800,fill:C.red})+`<line x1="${x+130}" x2="${x+230}" y1="360" y2="360" stroke="${C.line}" stroke-width="4"/>`+T(x+180,470,t,{size:42,w:700}))}).join('')},
+
+{ch:'01 什么是HIL测试',grad:2,cues:['首先，让我们先从一个最基本的问题开始：','什么是HIL测试？'],svg:chapter('01','什么是 HIL 测试？','WHAT IS HIL TESTING')},
+
+{ch:'01 什么是HIL测试',cues:['HIL的全称为Hardware-in-the-Loop，即硬件在环','我们把硬件在环拆开来看','首先，硬件指的是真实的待测系统，比如空调控制器','空调控制器的作用是控制被控对象即车厢热环境','以调节车内温度'],
+ /* "HIL" expands into "Hardware-In-the-Loop": the red H/I/L slide apart while the rest of each word grows in */
+ hook:(ci,root)=>{const gx=root.querySelector('#hilx');
+   if(!gx._built){gx._built=1;const parts=['H','ardware-','I','n-the-','L','oop'];
+     /* hidden while measuring, and no transition until the collapsed "HIL" state is set */
+     gx.style.visibility='hidden';gx.classList.add('hxinit');
+     gx.innerHTML=parts.map((p,i)=>`<text class="tt hx${i%2?' hxf':''}" y="90" font-size="80" font-weight="500" fill="${i%2?C.dark:C.red}" dominant-baseline="central">${p}</text>`).join('');
+     const els=[...gx.children],w=els.map(e=>e.getComputedTextLength()),gap=26;
+     let fx=960-w.reduce((a,b)=>a+b,0)/2,ix=960-(w[0]+w[2]+w[4]+gap*2)/2,last=ix;
+     els.forEach((e,i)=>{e.setAttribute('x',fx);
+       if(i%2){e.style.transform=`translate(${last-fx}px,0) scaleX(0)`;e.style.opacity=0}
+       else{e.style.transform=`translate(${ix-fx}px,0)`;last=ix+w[i];ix+=w[i]+gap}
+       fx+=w[i]});
+     gx.getBoundingClientRect();gx.classList.remove('hxinit');gx.style.visibility=''}
+   const expand=()=>gx.querySelectorAll('.hx').forEach(e=>{e.style.transform='none';e.style.opacity=1});
+   clearTimeout(gx._t);if(ci===0)gx._t=setTimeout(expand,700/speed);else expand()},   // expands as "Hardware-in-the-Loop" is spoken
+ svg:
+ R(0,'<g id="hilx"></g>','fade')
+ /* this page explains only the hardware part; "in the loop" comes later, so only the Hardware box, placed right above the controller */
+ +R(1,B(200,170,560,110,{fill:C.redL,stroke:C.red,t:'Hardware → 硬件',tc:C.red}),'left')
+ +R(2,ecu(480,500,{icon:'❄',label:'空调控制器',lc:C.red,stroke:C.red}),'pop')
+ +R(3,A('M620,500 H1060',{c:'red'})+T(840,465,'控制',{size:30,fill:C.red,w:700}),'draw')
+ +R(3,car(1340,500,{s:1.1})+T(1340,620,'被控对象：车厢热环境',{size:32,w:700}),'up',{d:.4})},
+
+{ch:'01 什么是HIL测试',cues:['想象这样一个场景，在炎热的夏天','驾驶员进入车内，通过空调控制面板设定了一个舒适的温度','控制器收到输入信号后，按照控制逻辑启动制冷系统','使车内温度逐渐下降'],
+ hook:(ci,root)=>{const t=root.querySelector('#tval'),m=root.querySelector('#merc');
+   const set=v=>{t.textContent=Math.round(v)+'°C';const h=(v-10)/35*220;m.setAttribute('y',-h);m.setAttribute('height',h+30)};
+   /* sweat drops dry up one by one as the cabin cools */
+   const drops=[...root.querySelectorAll('.sweat')].map(d=>d.parentNode),dry=k=>drops.forEach((d,i)=>{const th=.15+i/drops.length*.85;d.style.opacity=Math.max(0,Math.min(1,(th-k)/.15))});
+   /* setting the temperature: on the driver's line the − button is pressed six times, 28 °C → 22 °C */
+   const st=root.querySelector('#setT'),btn=root.querySelector('#btnMinus'),ring=root.querySelector('#pressRing');(root._tt||[]).forEach(clearTimeout);root._tt=[];
+   if(ci<1)st.textContent='28°C';else if(ci>1)st.textContent='22°C';
+   else{st.textContent='28°C';[0,1,2,3,4,5].forEach(k=>root._tt.push(setTimeout(()=>{btn.classList.add('down');ring.classList.remove('ping');ring.getBBox();ring.classList.add('ping');
+       st.textContent=(27-k)+'°C';music.sfx('tick');root._tt.push(setTimeout(()=>btn.classList.remove('down'),140))},(2300+k*400)/speed)))}
+   cancelAnimationFrame(root._raf);if(ci<3){set(38);dry(0);return}
+   const t0=performance.now();const step=now=>{const k=Math.min(1,(now-t0)/4000);set(38-14*(1-Math.pow(1-k,2)));dry(k);if(k<1)root._raf=requestAnimationFrame(step)};root._raf=requestAnimationFrame(step)},
+ svg:
+ R(0,sun(1480,110),'pop')
+ +R(0,thermo(1690,420)+T(1690,560,'车内温度',{size:30,w:700})+`<text id="tval" class="tt" x="1800" y="300" font-size="60" font-weight="500" fill="${C.red}" text-anchor="middle" dominant-baseline="central">38°C</text>`,'up',{d:.4})
+ +R(1,tile(150,380,'rgba(67,63,195,.1)',driver(0,18,1.05),'驾驶员'),'up')
+ /* the driver is dripping with sweat in the heat; the drops dry up one by one while the cabin cools (see hook) */
+ +R(1,[[106,322,1.5],[196,316,1.7],[204,360,1.3],[98,366,1.2],[172,296,1.1],[128,298,1.0],[222,330,1.0]].map(([x,y,k],i)=>
+   `<g transform="translate(${x},${y}) scale(${k})"><g class="sweat" style="animation-delay:${(i*.21).toFixed(2)}s"><path d="M0,-13 Q9,1 0,9 Q-9,1 0,-13 Z" fill="#33D3FF"/><circle cx="-2.5" cy="1" r="2.2" fill="#fff" opacity=".8"/></g></g>`).join(''),'up')   /* together with the driver */
+ +R(1,tile(420,380,'rgba(0,173,147,.1)',icoPanel,'空调控制面板'),'pop',{d:.3})
+ +R(2,A('M530,380 H760',{c:'blue'})+T(645,345,'输入信号',{size:26,fill:C.gray}),'draw')
+ +R(2,tile(870,380,'rgba(246,38,52,.1)',icoChip,'控制器'),'pop',{d:.3})
+ +R(2,A('M980,380 H1160',{c:'blue'})+T(1070,345,'启动',{size:26,fill:C.gray}),'draw',{d:.6})
+ +R(2,tile(1270,380,'rgba(2,142,237,.1)',fan(0,0,64),'制冷系统'),'pop',{d:.9})
+ +R(3,A('M1380,380 H1600',{c:'blue',flow:1}),'fade')},
+
+{ch:'01 什么是HIL测试',cues:['在这个过程中，如果控制器没有获取车内的实际温度','也不会根据温度变化自动调整制冷强度','这种控制方式叫作开环控制'],svg:
+ /* open loop: a steady one-way flow of amber dots (evenly spaced, constant speed, like water in a pipe) from the set
+    temperature through controller, cooling and cabin and out; nothing flows on the feedback path. Drawn first so the
+    dots pass behind the boxes. */
+ R(2,Array.from({length:12},(_,k)=>`<circle r="8" fill="${C.amber}" style="filter:drop-shadow(0 0 5px rgba(255,169,0,.6))"><animateMotion path="M320,360 H1830" dur="6s" begin="${(-k*.5).toFixed(1)}s" repeatCount="indefinite"/></circle>`).join(''),'fade')
+ +R(0,B(60,300,260,120,{t:'设定温度',s:'22°C'}))
+ +R(0,A('M320,360 H460'),'draw',{d:.2})
+ +R(0,B(470,300,280,120,{t:'控制器',stroke:C.red,sw:4}),'up',{d:.3})
+ +R(0,A('M750,360 H890'),'draw',{d:.5})
+ +R(0,B(900,300,280,120,{t:'制冷系统'}),'up',{d:.6})
+ +R(0,A('M1180,360 H1320'),'draw',{d:.8})
+ +R(0,B(1330,300,280,120,{t:'车厢'}),'up',{d:.9})
+ +R(0,A('M1610,360 H1830')+T(1720,320,'车内温度',{size:28,fill:C.gray}),'draw',{d:1.1})
+ +R(0,L('M1720,360 V600 H610 V430',{c:'gray',dash:1})+cross(1160,600,30),'fade',{d:1.5}) +R(2,T(960,130,'开环控制  Open-loop Control',{size:56,w:800,fill:C.red}),'pop')},
+
+{ch:'01 什么是HIL测试',cues:['这个时候打开车窗通风','外界热空气进入车内，导致车内温度发生波动','如果车辆通过温度传感器测量车内温度','并将测量结果反馈给控制器','控制器将当前温度与目标温度进行比较','并根据比较结果自动调整输出','这就是闭环控制'],svg:
+ /* closed loop, shown as signal flow (on "这就是闭环控制"): amber pulses — the same as the controller-output dots on the line
+    before — circle the whole loop through controller, cooling, cabin, sensor and feedback into Σ. Drawn first so they pass behind the boxes. */
+ R(6,[0,1,2,3].map(k=>`<circle r="9" fill="${C.amber}" style="filter:drop-shadow(0 0 5px rgba(255,169,0,.55))"><animateMotion path="M420,350 H1720 V610 H380 V350 H420" dur="5s" begin="${-k*1.25}s" repeatCount="indefinite"/></circle>`).join(''),'fade')
+ +B(40,290,240,120,{t:'目标温度'})+A('M280,350 H335')
+ +`<circle cx="380" cy="350" r="40" fill="#fff" stroke="${C.dark}" stroke-width="4"/>`+T(380,350,'Σ',{size:40,w:700})
+ +A('M420,350 H495')+`<g data-add="5 glow">${B(500,290,260,120,{t:'控制器',stroke:C.red,sw:4})}</g>`+A('M760,350 H875')
+ +B(880,290,260,120,{t:'制冷系统'})+A('M1140,350 H1295')+B(1300,290,280,120,{t:'车厢'})
+ +A('M1580,350 H1830')+T(1720,315,'车内温度',{size:28,fill:C.gray}) +R(1,`<path d="M1440,165 q16,15 0,30 q-16,15 0,30 q16,15 0,30 L1440,282" fill="none" stroke="${C.orange}" stroke-width="6" stroke-linecap="round" marker-end="url(#ah-orange)"/>`+T(1530,225,'热空气',{size:28,w:700,fill:C.orange}),'up')
+ +R(1,B(1605,105,260,150,{rx:14})+L(wv(1625,180,220,28,3,.35),{c:'red',sw:4}),'draw',{d:2.4})   /* as "导致车内温度发生波动" is said */
+ +R(2,A('M1720,350 V610 H1590')+B(1300,560,280,100,{t:'温度传感器',fill:C.blueL,stroke:C.blue,tc:C.blue}),'draw')
+ +R(3,A('M1300,610 H380 V395',{c:'blue'})+T(840,580,'反馈',{size:32,w:800,fill:C.blue}),'draw')
+ +R(3,T(330,318,'+',{size:34,w:800})+T(345,410,'−',{size:34,w:800}),'fade',{d:1})
+ +R(4,[0,.9].map(d=>`<circle class="ripple" style="animation-delay:${d}s;--sx:1.6;--sy:1.6" cx="380" cy="350" r="40" fill="${C.amber}" fill-opacity=".12" stroke="${C.amber}" stroke-width="4"/>`).join(''),'fade',{out:5})
+ +R(5,[0,.9].map(d=>`<rect class="ripple" style="animation-delay:${d}s" x="500" y="290" width="260" height="120" rx="18" fill="${C.amber}" fill-opacity=".12" stroke="${C.amber}" stroke-width="4"/>`).join('')
+   +[0,.33,.66].map(d=>`<circle r="9" fill="${C.amber}" opacity="0"><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.15;.8;1" dur="1s" begin="${d}s" repeatCount="indefinite"/><animateMotion path="M764,350 H862" dur="1s" begin="${d}s" repeatCount="indefinite"/></circle>`).join(''),'fade',{out:6}) +R(6,T(960,130,'闭环控制  Closed-loop Control',{size:56,w:800,fill:C.red}),'pop')},
+
+{ch:'01 什么是HIL测试',cues:['所谓在环','是指将真实的待测系统接入控制回路','使其与仿真的被控对象和外部环境进行交互','了解了HIL测试的概念后，我们再来看一看','HIL 测试是如何进行的'],svg:
+ R(0,`<path id="lp7" d="M520,170 H1400 A230,230 0 0 1 1400,630 H520 A230,230 0 0 1 520,170 Z" fill="none" stroke="${C.line}" stroke-width="8" class="flow"/>`
+   +[0,1,2,3].map(i=>`<circle r="13" fill="${C.red}"><animateMotion dur="8s" begin="${-i*2}s" repeatCount="indefinite"><mpath href="#lp7"/></animateMotion></circle>`).join(''),'fade') +R(1,B(50,320,480,160,{fill:'#fff',stroke:C.red,sw:5,t:'真实的待测系统',tc:C.red}),'pop') +R(2,B(1390,320,480,160,{fill:'#fff',stroke:C.blue,sw:5,dash:1,t:'仿真被控对象与外部环境',tc:C.blue}),'pop')},
+
+{ch:'01 什么是HIL测试',cues:['HIL测试用于验证软件与真实硬件的集成','因此，在HIL测试中，被测系统，也就是SUT','通常是运行着软件的真实控制器'],svg:
+ /* software + hardware merge into the SUT: the board slides to the center and the code window shrinks onto its chip */
+ `<g>`
+ +R(0,`<g class="hwm" data-add="1 merge">${pcb(1240,350,1.05)}</g>`,'right',{d:.4})
+ +R(0,`<g class="swm" data-add="1 merge"><rect x="520" y="220" width="360" height="260" rx="18" fill="#24262D"/>`
+   +[0,1,2].map(i=>`<circle cx="${550+i*24}" cy="246" r="7" fill="${['#FA5146','#FFA900','#00AD93'][i]}"/>`).join('')
+   +`<g class="code" data-add="2 run">`+[[560,290,180,'#33D3FF'],[590,330,220,'#9B46EA'],[590,370,150,'#00AD93'],[560,410,240,'#FFA900'],[590,450,120,'#33D3FF']].map(([x,y,w,c],i)=>`<rect class="cl" style="animation-delay:${(i*.25).toFixed(2)}s" x="${x}" y="${y-8}" width="${w}" height="16" rx="8" fill="${c}"/>`).join('')+`</g></g>`,'left')
+ /* software running: signals pulse out of the chip along the board traces */
+ +R(2,`<g transform="translate(960,350) scale(1.05)">`+pcbTraces().map((d,i)=>`<path class="sig" style="animation-delay:${(-(i%5)*.24).toFixed(2)}s" d="${d}"/>`).join('')+`</g>`,'fade')
+ +`</g>`
+ +`<g class="fadem" data-add="1 merge">`+R(0,T(700,530,'软件',{size:36,w:700}),'fade')+R(0,T(960,350,'+',{size:90,fill:C.gray}),'pop',{d:.3})+R(0,T(1240,530,'真实硬件',{size:36,w:700}),'fade',{d:.4})+`</g>`
+ +R(1,`<rect x="790" y="210" width="340" height="280" rx="24" fill="none" stroke="${C.red}" stroke-width="5" stroke-dasharray="16 10"/>`,'pop',{d:1.5,out:2})   /* frame + SUT tag only on the SUT line */
+ +R(1,P(960,210,'SUT',{fill:C.red,c:'#fff',size:30}),'pop',{d:1.5,out:2})
+ +R(2,`<circle class="led" cx="1065" cy="268.1" r="9.45" fill="#95C33E"/>`,'fade')
+ +R(2,T(960,495,'控制器',{size:32,w:700}),'fade',{d:.3})},   // same label and spot as the next page, for a seamless hand-over
+
+{ch:'01 什么是HIL测试',soft:true,cues:['为了对控制器进行测试','HIL测试系统需要模拟控制器在实际运行中所处的外部环境','使其能够像在真实环境中一样工作','在真实环境中，控制器需要连接电源','需要连接传感器获取外部状态','并输出控制信号驱动执行器','此外，控制器还需要通过通信网络与其他控制器交换数据'],svg:
+ /* simulated environment around the controller while the narration describes it; it clears before the real-environment parts appear */
+ R(1,`<circle cx="960" cy="380" r="300" fill="${C.blueL}" fill-opacity=".5" stroke="${C.blue}" stroke-width="4" stroke-dasharray="16 12"/>`
+   +`<g transform="translate(960,380)"><g class="spin" style="animation-duration:14s"><circle r="330" fill="none"/><circle r="330" fill="none" stroke="${C.blue}" stroke-width="3" stroke-dasharray="4 22" opacity=".6"/></g></g>`
+   +P(960,80,'模拟的外部环境',{fill:'#fff',stroke:C.blue,c:C.blue,size:30}),'pop',{out:3})
+ /* same place and size as the board at the end of the previous page, so the controller carries straight over */
+ +R(0,`<g>${sut(960,350,1.05)}</g>`+T(960,495,'控制器',{size:32,w:700}),'instant') /* balanced around the controller: power top-left, sensor bottom-left, actuator top-right, network along the bottom with its label at the right */
+ +R(3,battery(560,215)+T(560,285,'电源',{size:30,w:700})+L('M630,215 C730,215 760,290 830,305',{c:'red',sw:6}),'draw',{d:3.1})   /* each part appears as it is named */
+ +R(4,sensor(560,470)+T(560,540,'传感器',{size:30,w:700})+A('M640,470 C730,470 760,420 830,405',{c:'blue'}),'draw',{d:.85})
+ +R(5,A('M1095,305 C1190,305 1220,215 1280,215',{c:'orange'})+fan(1360,215,60)+T(1360,305,'执行器',{size:30,w:700}),'draw',{d:1.9})
+ +R(6,L('M620,690 H1300',{sw:7})+L('M960,525 V690',{sw:5,c:'gray'})+L('M700,660 V690',{sw:5,c:'gray'})+L('M1220,660 V690',{sw:5,c:'gray'})+pcbMini(700,620,.42)+pcbMini(1220,620,.42)+T(1340,690,'通信网络',{a:'start',size:30,w:700})+T(1340,730,'CAN / Ethernet …',{a:'start',size:24,fill:C.gray}),'draw',{d:2.4})},
+
+{ch:'01 什么是HIL测试',cues:['因此，HIL测试系统需要为控制器供电','并提供相应的I/O和通信接口','同时，还需要实时运行的物理仿真模型','来模拟被控对象的动态行为','除此之外，完整的 HIL 测试系统还需要实时平台','残余总线仿真以及测试执行工具等组成部分','针对这些需求，Vector 提供了一套完整的 HIL 测试解决方案'],svg:
+ `<g data-add="6 glow">${B(60,50,1280,710,{fill:'#fff',stroke:C.mute,dash:1,rx:28})}</g>`+T(100,95,'HIL 测试系统',{a:'start',size:32,w:800,fill:C.gray})
+ +sut(1650,400,.85)+T(1650,520,'SUT',{size:32,w:700,fill:C.red})
+ /* each part appears as it is named in the narration */
+ +R(0,B(100,140,380,120,{t:'电源',fill:C.amberL,stroke:C.amber}),'pop',{d:2.8})
+ +R(0,L('M1340,340 H1531',{c:'amber',sw:6})+T(1440,318,'供电',{size:24,fill:C.amber,w:700}),'draw',{d:2.9})
+ +R(1,B(520,140,380,120,{t:'I/O 接口',fill:C.blueL,stroke:C.blue}),'pop',{d:1.3})
+ +R(1,B(940,140,360,120,{t:'通信接口',fill:C.greenL,stroke:C.green}),'pop',{d:1.8})
+ +R(1,L('M1340,400 H1531',{c:'blue',sw:6})+T(1440,378,'I/O',{size:24,fill:C.blue,w:700})+L('M1340,460 H1531',{c:'green',sw:6})+T(1440,438,'通信',{size:24,fill:C.green,w:700}),'draw',{d:1.4})
+ +R(2,B(100,300,600,170,{t:'物理仿真模型'}),'pop',{d:2.3})
+ +R(3,L(wv(130,450,540,9,3),{c:'red',sw:4}),'draw')
+ +R(4,B(740,300,560,170,{t:'实时平台'}),'pop',{d:2.8})   /* appears as "实时平台" is said, at the end of the line */
+ +R(5,B(100,510,600,120,{t:'残余总线仿真'}),'pop')
+ +R(5,B(740,510,560,120,{t:'测试执行工具'}),'pop',{d:1.7})
+ +R(6,B(370,660,660,80,{fill:C.red,stroke:C.red,t:'Vector HIL 测试解决方案',tc:'#fff'}),'pop')},
+
+{ch:'01 什么是HIL测试',cues:['在设计阶段，DYNA4 用于编辑模型和场景','vTESTstudio 用于设计和编写测试用例','模型和测试用例随后被加载到 CANoe中','CANoe 负责实时运行物理仿真模型和残余总线仿真','并完成测试执行、结果分析和报告生成','测试过程中，CANoe 通过网络接口卡与SUT 进行通信','并通过 VT System 或 VIO System 与 SUT 的 I/O 接口连接'],svg:
+ R(0,T(250,60,'设计阶段',{size:30,w:800,fill:C.gray}),'fade')
+ +R(0,B(60,110,380,190,{stroke:C.dark,sw:4})+T(250,165,'DYNA4',{size:44,w:700})+T(250,237,'模型编辑\n场景编辑',{size:26,fill:C.gray}),'left')
+ +R(1,B(60,420,380,190,{stroke:C.dark,sw:4})+T(250,475,'vTESTstudio',{size:44,w:700})+T(250,547,'测试设计\n编程',{size:26,fill:C.gray}),'left')
+ +R(2,A('M440,205 C500,205 500,300 555,300',{c:'red'})+A('M440,515 C500,515 500,430 555,430',{c:'red'}),'draw')
+ +R(2,T(820,60,'执行阶段',{size:30,w:800,fill:C.gray}),'fade')
+ +R(2,B(570,90,500,620,{fill:C.redL,stroke:C.red,sw:5,rx:26})+T(820,145,'CANoe',{size:52,w:800,fill:C.red}),'pop',{d:.3})
+ +[['物理仿真模型',3,0],['残余总线仿真',3,.3],['测试执行',4,0],['结果分析',4,.3],['报告生成',4,.6]].map(([t,at,d],i)=>R(at,B(610,200+i*98,420,74,{t,ts:30,rx:12}),'left',{d})).join('')
+ +R(5,sut(1735,400,.72)+T(1735,500,'SUT',{size:32,w:700,fill:C.red}),'pop')
+ +R(5,A('M1080,250 H1185',{c:'blue',both:1})+B(1190,180,290,140,{t:'网络接口卡',s:'CAN / LIN / Ethernet',ss:22,fill:C.blueL,stroke:C.blue})+A('M1490,250 C1560,250 1560,330 1615,345',{c:'blue',both:1})+T(1560,225,'通信',{size:24,w:700,fill:C.blue}),'draw',{d:.3})
+ +R(6,A('M1080,560 H1185',{c:'gray',both:1})+B(1190,480,290,160,{t:'VT System',s:'或 VIO System',fill:C.greenL,stroke:C.green})+A('M1490,560 C1560,560 1560,470 1615,455',{c:'green',both:1})+T(1560,590,'I/O',{size:24,w:700,fill:C.green})
+   /* VT System also powers the SUT */
+   +A('M1420,478 C1445,415 1520,400 1612,400',{c:'amber'})+T(1505,380,'供电',{size:24,w:700,fill:C.amber}),'draw')},
+
+{ch:'01 什么是HIL测试',cues:['借助Vector的HIL测试平台，可以高效地进行大量测试','这不仅能够加快开发','降低成本','还能提升产品质量','那么，HIL 测试为何能够带来这些价值？'],svg:
+ Array.from({length:40},(_,i)=>{const r=Math.floor(i/8),c=i%8,x=110+c*88,y=130+r*88;
+   return R(0,`<rect x="${x}" y="${y}" width="68" height="68" rx="12" fill="${C.greenL}" stroke="${C.green}" stroke-width="3"/><path d="M${x+18},${y+35} l11,11 l21,-22" fill="none" stroke="${C.green}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`,'pop',{d:3.3+i*.03})   /* checks fill in as "执行大量测试" is said */}).join('') +[['clock','加快开发',C.blue,C.blueL],['money','降低成本',C.green,C.greenL],['checklist','提升质量',C.amber,C.amberL]].map(([ic,t,c,f],i)=>
+   R(i+1,B(940,120+i*160,880,130,{rx:20})+`<circle cx="1020" cy="${185+i*160}" r="44" fill="${f}"/>`
+   +(ic==='clock'?g(1020,185+i*160,`<circle r="24" fill="none" stroke="${c}" stroke-width="3.5"/><path d="M0,-16 V0 L10,10" fill="none" stroke="${c}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`)
+    :ic==='money'?g(1020,183+i*160,`<g fill="${f}" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">`
+       +`<rect x="-27" y="-20" width="54" height="28" rx="1.5" fill="none"/>`
+       +`<path d="M-19,2 V20 A9,3.5 0 0 0 -1,20 V2"/><ellipse cx="-10" cy="2" rx="9" ry="3.5"/><path d="M-19,8 A9,3.5 0 0 0 -1,8 M-19,14 A9,3.5 0 0 0 -1,14" fill="none"/>`
+       +`<path d="M0,12 V20 A9,3.5 0 0 0 18,20 V12"/><ellipse cx="9" cy="12" rx="9" ry="3.5"/><path d="M0,16 A9,3.5 0 0 0 18,16" fill="none"/></g>`
+       +`<text x="9" y="-6" font-size="12" fill="${c}" text-anchor="middle" dominant-baseline="central">100</text>`)
+    :ic==='checklist'?g(1020,185+i*160,`<g fill="none" stroke="${c}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">`
+       +`<path d="M-14,-18 H-22 V21 H-3 M2.5,-18 H8.5 V5"/><path d="M-15,-15 L-13.6,-20 H-10 V-22.5 H-0.5 V-20 H3 L4.4,-15 Z"/>`
+       +`<path d="M-17.9,-7 H-6.1 M-17.9,3.7 H-6.1 M-17.9,14.3 H-6.1"/><path d="M-2.7,-9 L-0.8,-7 L3.7,-11.5 M-2.7,1.6 L-0.8,3.6 L3.7,-0.9"/>`
+       +`<rect x="0.7" y="8.3" width="22" height="12.4" fill="${f}"/><path d="M4.4,20.7 V23 H10 V20.7 M13.6,20.7 V23 H19.4 V20.7"/></g>`
+       +`<text x="11.7" y="14.7" font-size="7.5" font-weight="600" fill="${c}" text-anchor="middle" dominant-baseline="central">ECU</text>`)
+    :T(1020,185+i*160,ic,{size:46,w:800,fill:c}))+T(1100,185+i*160,t,{a:'start',size:46,w:800}),'right')).join('')},
+
+{ch:'02 为什么要进行HIL测试',grad:2,cues:['这就是我们接下来要探讨的主题：为什么要进行HIL测试'],svg:chapter('02','为什么要进行 HIL 测试？','WHY HIL TESTING')},
+
+{ch:'02 为什么要进行HIL测试',cues:['在正式阐述这个主题之前，我们先来看几个历史上的真实案例'],svg:
+ R(0,T(960,140,'历史上的真实案例',{size:56,w:800}),'up')
+ +R(0,A('M160,420 H1770',{c:'gray',sw:4}),'draw',{d:.3})
+ +[[420,'1985–1987','Therac-25','放射治疗设备事故'],[960,'1996','阿丽亚娜5型火箭','首飞爆炸'],[1500,'1999','火星气候探测者号','在火星上空解体']].map(([x,y,n,d],i)=>
+   R(0,`<circle cx="${x}" cy="420" r="18" fill="${C.red}"/>`+T(x,345,y,{size:44,w:800,fill:C.red})+T(x,500,n,{size:38,w:700}),'up',{d:.8+i*.5})).join('')},
+
+{ch:'02 为什么要进行HIL测试',cues:['想象一下，一个项目耗费了数年时间、数亿美元资金','然而，它刚刚升空，便化作一团火球和浓烟','1996年，阿丽亚娜5型火箭的首次发射，就经历了这样一场灾难','这起事故与软件中数值转换出现的异常相关'],svg:
+ `<line x1="240" x2="900" y1="640" y2="640" stroke="${C.mute}" stroke-width="6"/><rect x="660" y="300" width="22" height="340" fill="${C.mute}"/>${[0,1,2,3,4,5,6].map(i=>`<line x1="660" x2="682" y1="${320+i*45}" y2="${345+i*45}" stroke="#fff" stroke-width="3"/>`).join('')}<path d="M682,360 H610 M682,470 H610" stroke="${C.mute}" stroke-width="8"/>`
+ +`<g transform="translate(560,620)"><g class="rk" data-add="1 launch">${R(1,'<path class="flick" d="M-24,0 Q0,95 24,0 Z" fill="#FA5146"/><path class="flick" d="M-13,0 Q0,58 13,0 Z" fill="#FFA900"/>','fade')}${rocket()}</g></g>`
+ +R(1,`<circle cx="500" cy="630" r="50" fill="#E0E2E8"/><circle cx="620" cy="635" r="44" fill="#E0E2E8"/><circle cx="560" cy="650" r="40" fill="#E0E2E8"/>`,'pop',{d:.3})
+ +R(1,boom(560,140).replace(' data-sfx="boom"',''),'pop',{d:2.3})   /* no explosion sound here */
+ +R(0,B(1060,110,360,150,{t:'数年',s:'研发时间',ts:56,rx:20}),'up')
+ +R(0,B(1460,110,360,150,{t:'数亿美元',s:'资金投入',ts:56,rx:20}),'up',{d:.3})
+ +R(2,T(1440,360,'1996 · 阿丽亚娜5型火箭首次发射',{size:40,w:800}),'up')
+ +R(3,B(1060,440,760,200,{fill:C.redL,stroke:C.red,rx:20})+T(1440,500,'64 位浮点数 → 16 位整数',{size:40,w:700})+T(1440,575,'数值转换溢出 → 软件异常',{size:34,w:800,fill:C.red}),'pop')},
+
+{ch:'02 为什么要进行HIL测试',cues:['类似的事故并未就此停止','1999年，经过近10个月的航行后','火星气候探测者号在火星上空解体','这源于软件中英制单位与公制单位的混用'],
+ hook:(ci,root)=>{if(ci>=1&&!root._mco){root._mco=1;root.querySelector('#mcoMove').beginElement()}},
+ svg:
+ `<defs><radialGradient id="mg" cx="35%" cy="35%"><stop offset="0" stop-color="#FFA900"/><stop offset=".6" stop-color="#FA5146"/><stop offset="1" stop-color="#84181F"/></radialGradient></defs>`
+ +R(0,`<circle cx="1460" cy="430" r="210" fill="url(#mg)"/><circle cx="1400" cy="380" r="26" fill="#84181F" opacity=".5"/><circle cx="1530" cy="500" r="38" fill="#84181F" opacity=".4"/><circle cx="1500" cy="330" r="14" fill="#84181F" opacity=".5"/>`+T(1460,430,'火星',{size:40,w:800,fill:'#fff'}),'pop')
+ +R(0,`<defs><radialGradient id="eg" cx="70%" cy="20%" r="90%"><stop offset="0" stop-color="#33D3FF"/><stop offset=".5" stop-color="#028EED"/><stop offset="1" stop-color="#1C3690"/></radialGradient><clipPath id="ec"><circle cx="40" cy="900" r="400"/></clipPath></defs>`
+   +`<circle cx="40" cy="900" r="416" fill="none" stroke="#33D3FF" stroke-opacity=".3" stroke-width="12"/><circle cx="40" cy="900" r="400" fill="url(#eg)"/>`
+   +`<g clip-path="url(#ec)" fill="#95C33E"><path d="M120,560 q70,-30 130,10 q40,40 -10,80 q-60,30 -90,-10 q-50,-40 -30,-80Z"/><path d="M300,700 q50,-10 80,30 q10,50 -40,60 q-50,0 -60,-40 q0,-40 20,-50Z"/><path d="M-60,640 q60,-20 90,30 q10,60 -50,70 q-60,-10 -40,-100Z"/></g>`
+   +T(190,690,'地球',{size:36,w:700,fill:'#fff'}),'fade',{d:.2})
+ +R(0,`<path d="M323,617 Q760,80 1240,400" fill="none" stroke="${C.mute}" stroke-width="4" stroke-dasharray="10 10"/>`,'fade',{d:.4})
+ +R(1,`<g><rect x="-50" y="-10" width="32" height="20" fill="${C.blue}"/><rect x="18" y="-10" width="32" height="20" fill="${C.blue}"/><rect x="-18" y="-14" width="36" height="28" rx="4" fill="#FFA900" stroke="${C.dark}" stroke-width="3"/><animateMotion id="mcoMove" dur="3.5s" begin="indefinite" fill="freeze" path="M323,617 Q760,80 1240,400"/></g>`,'fade',{out:2})
+ +R(2,`<circle cx="1460" cy="430" r="290" fill="none" stroke="${C.green}" stroke-width="4" stroke-dasharray="14 10"/>`+`<circle cx="1460" cy="430" r="238" fill="none" stroke="#FFA900" stroke-width="22" opacity=".45"/>`,'fade')
+ +R(2,`<path d="M1240,400 Q1250,520 1330,600" fill="none" stroke="${C.red}" stroke-width="6" stroke-dasharray="10 8"/>`+[[1330,600,0],[1350,585,30],[1316,620,-40],[1360,615,60]].map(([x,y,a])=>`<rect x="${x-9}" y="${y-6}" width="18" height="12" fill="${C.dark}" transform="rotate(${a} ${x} ${y})"/>`).join('')+cross(1290,650,22),'pop',{d:.3})
+ +R(3,B(60,30,720,180,{fill:C.amberL,stroke:C.amber,rx:20})+T(420,90,'磅力·秒 (lbf·s)  ≠  牛顿·秒 (N·s)',{size:36,w:800})+T(420,160,'英制单位与公制单位混用',{size:32,w:800,fill:C.orange}),'pop')},
+
+{ch:'02 为什么要进行HIL测试',cues:['相比之下，Therac-25的事故更加沉重','这款放射治疗设备原本用于挽救癌症患者的生命','却因设计缺陷和测试不足，变成了致命的陷阱'],svg:
+ R(0,`<rect x="420" y="560" width="200" height="80" rx="12" fill="${C.mute}"/><rect x="460" y="150" width="120" height="420" rx="20" fill="#E0E2E8" stroke="${C.dark}" stroke-width="5"/><rect x="560" y="150" width="260" height="120" rx="20" fill="#E0E2E8" stroke="${C.dark}" stroke-width="5"/><rect x="755" y="268" width="50" height="26" fill="${C.dark}"/>`
+   +`<rect x="640" y="520" width="420" height="30" rx="10" fill="${C.dark}"/><rect x="700" y="550" width="20" height="90" fill="${C.mute}"/><rect x="980" y="550" width="20" height="90" fill="${C.mute}"/><ellipse cx="840" cy="500" rx="150" ry="24" fill="#7D8FDE"/><circle cx="1015" cy="490" r="28" fill="#FFA900"/>`
+   +`<line x1="300" x2="1100" y1="640" y2="640" stroke="${C.mute}" stroke-width="6"/>`,'fade')
+ +R(1,`<path class="beam" data-add="2 danger" d="M762,294 H798 L850,480 H710 Z"/>`,'fade')
+ +R(2,warn(330,220,1.1),'pop',{d:.3})
+ +R(0,T(1420,170,'Therac-25',{size:68,w:800}),'right')
+ +R(0,T(1420,245,'1985 – 1987',{size:34,w:700,fill:C.gray}),'right',{d:.2})},
+
+{ch:'02 为什么要进行HIL测试',cues:['这些案例告诉我们，软件缺陷可能导致严重的后果','因此，在系统投入使用之前，必须进行充分验证','HIL 测试正是其中一种重要的验证手段'],
+ svg:
+ /* defect → consequence; at "充分验证" the shield appears on the path and stops it: both the consequence and the defect are eliminated */
+ R(0,`<g class="kill" data-add="1 off">`+bug(300,340,2.2)+`</g>`,'pop')
+ +R(0,`<g class="cut late" data-add="1 off">`+A('M450,340 H960',{c:'gray',noHead:1})+`</g>`,'draw',{d:.4})
+ +R(0,`<g class="cut" data-add="1 off">`+A('M960,340 H1480',{c:'gray'})+`</g>`,'draw',{d:.9})
+ +R(0,`<g class="kill" data-add="1 off">`+warn(1620,340,1.5)+`</g>`,'pop',{d:1.4})
+ /* "充分验证": many test conditions get checked one by one, then a shield — thorough, not "100%" */
+ +R(1,`<g transform="translate(960,340) scale(.8) translate(-1320,-340)"><circle cx="1320" cy="340" r="185" fill="#fff" fill-opacity=".6" stroke="${C.line}" stroke-width="4" stroke-dasharray="10 10"/>`
+   +['M-4,4 V-14 A4,4 0 0 1 4,-14 V4 M0,20 A8,8 0 1 1 0.01,20','M4,-18 L-8,2 H2 L-4,18 L10,-4 H0 Z','M-20,0 q5,-16 10,0 t10,0 t10,0 t10,0',
+     'M-14,10 L0,-10 L14,10 Z M-14,10 m-5,0 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0 M14,10 m-5,0 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0 M0,-10 m-5,0 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0',
+     'M-17,8 A17,17 0 1 1 17,8 M0,4 L9,-9','M-8,-2 H-17 M8,-2 H17 M-7,9 L-14,16 M7,9 L14,16 M0,-12 V-18 M-8,0 a8,11 0 1 0 16,0 a8,11 0 1 0 -16,0']
+   
+   .map((d,i)=>{const a=(-90+i*60)*Math.PI/180,x=(1320+Math.cos(a)*185).toFixed(1),y=(340+Math.sin(a)*185).toFixed(1);
+     return `<g class="vn" data-add="1 ok" data-sfx="tick" style="--vd:${(.9+i*.28).toFixed(2)}s" transform="translate(${x},${y})"><circle class="bg" r="44" stroke-width="5"/><path class="ic" d="${d}" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><g class="ck" transform="translate(32,-32)">${check(0,0,15).replace(' data-sfx="ok"','')}</g></g>`}).join('')+`</g>`,'fade',{d:.2})
+ +R(1,`<g transform="translate(960,340) scale(.8) translate(-1320,-340)" data-sfx="ok">`+shield(1320,340,1.15,C.greenL,C.green)+`<path d="M1282,342 L1310,370 L1362,314" fill="none" stroke="${C.green}" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></g>`,'pop',{d:2.7})},
+
+{ch:'02 为什么要进行HIL测试',cues:['首先，HIL 测试可以在真实车辆或完整系统尚未就绪时','就将真实控制器接入模拟环境进行验证','尽早发现和解决软硬件集成问题','从而减少后期返工，提高产品的稳健性和可靠性'],svg:
+ bh('1','提前发现问题')
+ /* a hand flicks the real car (centred) off to the right, then grabs the simulated car (blue dashed) at the left and drags it into place; then the controller appears */
+ +R(0,`<g class="pushout" data-add="1 go" data-sfx="whoosh" data-sfx-d=".45">`+car(960,410,{s:1.4})+`</g>`,'up')
+ +R(0,`<g class="pullin" data-add="1 go" data-sfx="whoosh" data-sfx-d="1.35"><g transform="translate(1300,410) scale(1.4)" fill="none" stroke="${C.blue}" stroke-width="4" stroke-dasharray="12 9" stroke-linejoin="round">`
+   +`<path d="${CARBODY}" fill="${C.blueL}"/><path d="${CARWIN}" stroke-width="3"/>`
+   +[-118,118].map(x=>`<circle cx="${x}" cy="32" r="30" fill="#fff"/>`).join('')+`</g></g>`,'fade')
+ +R(0,`<g class="hand2" data-add="1 go">${HAND2}</g>`,'fade')
+ +R(1,sut(520,400,.85),'pop',{d:3})
+ +R(1,A('M660,380 H1000',{c:'blue'})+A('M1000,425 H660',{c:'blue'}),'draw',{d:3.5})
+},
+
+{ch:'02 为什么要进行HIL测试',cues:['其次，HIL 测试对于复杂的安全关键型应用尤为重要','在汽车领域，制动、转向和动力系统等都可能直接关系到人身安全','HIL 测试能够仿真多种正常、边界和故障场景','从而验证系统在不同场景和条件下是否运行可靠'],svg:
+ bh('2','安全关键型应用')
+ +[[brake,480,'制动'],[wheel,960,'转向'],[bolt,1440,'动力系统']].map(([f,x,t],i)=>R(1,f(x,280)+T(x,395,t,{size:34,w:800}),'pop',{d:i*.3})).join('') +[['正常','日常工况',C.green,C.greenL],['边界','极限条件',C.amber,C.amberL],['故障','失效注入',C.red,C.redL]].map(([t,s,c,f],i)=>
+   R(2,B(270+i*480,540,420,140,{fill:f,stroke:c,sw:4,t:t+'场景',s,tc:c,rx:20}),'up',{d:i*.25})+R(3,check(660+i*480,545,26),'pop',{d:i*.25})).join('')
+},
+
+{ch:'02 为什么要进行HIL测试',cues:['第三，HIL 测试能够以更加安全、经济的方式验证系统','利用模型能够减少对实车和物理硬件的依赖','同时，HIL测试可以模拟传感器失效、通信中断等故障','降低损坏昂贵设备或使测试人员暴露于危险场景中的风险'],svg:
+ bh('3','更安全 · 更经济')+'<g transform="translate(0,60)">'
+ /* models reduce the dependency on physical hardware: the model appears, then the car fades and its dependency bar shrinks */
+ /* two cards side by side, vertically centred: models replacing hardware (left) and fault simulation (right) */
+ +R(1,B(120,170,780,370,{rx:24}),'fade')
+ +R(1,simModel(330,315)+T(330,460,'仿真模型',{size:30,w:800,fill:C.blue}),'pop',{d:.2})
+ +R(1,`<g class="dep" data-add="1 less">${car(680,320,{s:.75})}</g>`+T(680,420,'实车 / 物理硬件',{size:30,w:700}),'up',{d:.4})
+ +R(1,`<rect x="550" y="458" width="260" height="20" rx="10" fill="${C.light}"/><rect class="meter" data-add="1 less" x="550" y="458" width="260" height="20" rx="10" fill="${C.red}"/>`,'up',{d:.6})
+ +R(2,B(1020,170,780,370,{rx:24}),'fade')
+ +R(2,sensor(1220,330)+cross(1278,282,24)+T(1240,460,'传感器失效',{size:30,w:700}),'pop',{d:.2})
+ +R(2,L('M1460,330 H1555',{sw:9})+L('M1625,330 H1720',{sw:9})+`<path d="M1600,280 L1575,330 H1605 L1580,380" fill="none" stroke="${C.amber}" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>`+T(1590,460,'通信中断',{size:30,w:700}),'pop',{d:.5})
+ +'</g>'},
+
+{ch:'02 为什么要进行HIL测试',cues:['最后，HIL 测试还可以加快产品开发','开展早期测试有助于缩短开发和验证周期','加快产品迭代'],
+ /* bump the version number once per lap of the iteration ring (2s per lap, 0.9s once it speeds up) */
+ hook:(ci,root)=>{const t=root.querySelector('#verno');clearInterval(root._iv);
+   if(ci<1){t.textContent='v1';return}
+   let n=parseInt(t.textContent.slice(1))||1;
+   root._iv=setInterval(()=>{if(!root.isConnected){clearInterval(root._iv);return}
+     n++;t.textContent='v'+n;music.sfx('tick');t.classList.remove('bump');t.getBBox();t.classList.add('bump')},ci>=2?900:2000)},
+ svg:
+ bh('4','加快产品开发')
+ /* left: a stopwatch with a racing hand and speed lines (faster development);
+    right: a development/verification cycle that shrinks and spins faster (shorter cycle), then versions roll out (faster iteration) */
+ +R(0,`<g stroke="${C.mute}" stroke-width="8" stroke-linecap="round"><path class="flow" d="M300,340 H400"/><path class="flow" d="M270,400 H400"/><path class="flow" d="M300,460 H400"/></g>`
+   +g(580,400,`<rect x="-18" y="-172" width="36" height="26" rx="6" fill="${C.dark}"/><rect x="-6" y="-150" width="12" height="20" fill="${C.dark}"/>`
+     +`<circle r="130" fill="#fff" stroke="${C.dark}" stroke-width="12"/>`
+     +Array.from({length:12},(_,i)=>{const a=i*Math.PI/6;return `<line x1="${(Math.sin(a)*100).toFixed(1)}" y1="${(-Math.cos(a)*100).toFixed(1)}" x2="${(Math.sin(a)*114).toFixed(1)}" y2="${(-Math.cos(a)*114).toFixed(1)}" stroke="${C.mute}" stroke-width="${i%3?4:7}" stroke-linecap="round"/>`}).join('')
+     +`<g class="spin" style="animation-duration:1.4s"><circle r="130" fill="none"/><path d="M0,10 V-100" stroke="${C.red}" stroke-width="8" stroke-linecap="round"/></g><circle r="12" fill="${C.dark}"/>`)
+   ,'pop')
+ /* iteration loop: a comet laps the ring and every lap bumps the version; it speeds up on "加快产品迭代" */
+ +R(1,g(1300,390,`<circle r="130" fill="none" stroke="${C.light}" stroke-width="16"/>`
+     +`<g class="cycwrap" data-add="2 fast"><g class="cycspin"><circle r="140" fill="none"/>`
+     +`<path d="M0,-130 A130,130 0 0 1 112.6,-65" fill="none" stroke="${C.red}" stroke-width="16" stroke-linecap="round" opacity=".35"/>`
+     +`<path d="M112.6,-65 A130,130 0 0 1 130,0" fill="none" stroke="${C.red}" stroke-width="16" stroke-linecap="round"/>`
+     +`<circle cx="130" cy="0" r="16" fill="${C.red}"/></g></g>`
+     +`<text id="verno" class="tt" x="0" y="0" font-size="76" font-weight="500" fill="${C.red}" text-anchor="middle" dominant-baseline="central">v1</text>`)
+   ,'pop')},
+
+{ch:'03 HIL测试与黑盒测试',cues:['在实际的HIL测试中，通常从外部给控制器施加激励','并通过观察输出判断其行为是否符合预期','这与黑盒测试的思路十分相似'],svg:
+ R(0,B(80,220,400,240,{rx:20})+L('M110,410 H200 V270 H330 V370 H450',{c:'red',sw:6})+T(280,500,'输入激励',{size:32,w:800}),'left')
+ +R(0,A('M490,340 H780'),'draw',{d:.3})
+ +R(0,sut(960,320,.8)+T(960,430,'控制器',{size:32,w:700}),'pop',{d:.4,out:2})
+ +R(2,B(810,220,300,240,{fill:'#24262D',stroke:'#24262D',rx:20,t:'黑盒',ts:56,tc:'#fff'})+T(960,500,'?',{size:40,w:800,fill:C.gray}),'pop')
+ +R(0,A('M1130,340 H1420'),'draw',{d:.7})
+ +R(0,B(1440,220,400,240,{rx:20})+L('M1470,410 C1560,410 1580,280 1680,280 S1790,290 1815,290',{sw:6})+T(1640,500,'输出响应',{size:32,w:800}),'right',{d:.9})
+ +R(1,`<path d="M1470,410 C1560,405 1585,268 1680,272 S1790,283 1815,283" fill="none" stroke="${C.green}" stroke-width="5" stroke-dasharray="10 8"/>`,'pop')
+},
+
+{ch:'03 HIL测试与黑盒测试',grad:2,cues:['接下来，我们来看一看 HIL 测试与黑盒测试之间的区别和联系'],svg:chapter('03','HIL 测试 vs 黑盒测试','HIL vs. BLACK-BOX TESTING')},
+
+{ch:'03 HIL测试与黑盒测试',cues:['黑盒测试技术基于系统的规格说明，而不考虑其内部结构','因此，基于黑盒测试技术设计的测试用例通常不依赖软件的实现方式','即使软件的内部实现发生变化','只要预期行为保持不变，原有测试用例通常可以继续使用'],svg:
+ R(0,doc(220,320)+T(220,460,'规格说明',{size:34,w:800}),'up')
+ +R(0,`<g data-add="2 shake">${B(1250,200,320,250,{fill:'#24262D',stroke:'#24262D',rx:20})}</g>`+A('M1570,325 H1720'),'pop',{d:.3})
+ +R(0,T(1410,325,'?',{size:100,w:800,fill:'#fff'}),'fade',{d:.3,out:2})
+ +R(2,T(1410,325,'v1 → v2',{size:52,w:800,fill:'#FFA900'}),'pop',{d:.2})
+ +R(1,A('M330,320 H520'),'draw')
+ +R(1,B(540,190,440,260,{rx:20})+T(760,160,'测试用例',{size:32,w:800})+[0,1,2].map(i=>`<rect x="570" y="${215+i*75}" width="380" height="58" rx="10" fill="${C.light}"/>`+T(600,244+i*75,`TC-0${i+1}  输入 → 预期输出`,{a:'start',size:26})).join(''),'up',{d:.2})
+ +R(1,A('M980,320 H1240'),'draw',{d:.4}) +R(3,[0,1,2].map(i=>check(925,244+i*75,20)).join(''),'pop')
+},
+
+{ch:'03 HIL测试与黑盒测试',cues:['除了黑盒测试，我们可能还听过白盒测试','与黑盒测试不同，白盒测试技术基于系统的内部结构，并据此设计测试用例','例如语句覆盖测试和分支覆盖测试'],svg:
+ R(0,B(240,230,380,280,{fill:'#24262D',stroke:'#24262D',rx:20,t:'黑盒',ts:56,tc:'#fff'}),'left')
+ +R(0,B(880,130,860,480,{fill:'#fff',stroke:C.dark,sw:4,rx:24})+T(920,190,'白盒',{a:'start',size:56,w:800}),'pop',{d:.2})
+ +R(1,(()=>{const n=[[1310,190,'a = read()'],[1310,295,'a > 0 ?'],[1100,400,'b = a × 2'],[1520,400,'b = 0'],[1310,530,'return b']];
+   const e=[[1310,218,1310,266],[1270,318,1140,372],[1350,318,1480,372],[1100,428,1270,502],[1520,428,1350,502]];
+   /* "语句覆盖": two test runs walk the code — first through 是 (a>0), then through 否 — lighting each statement as it is executed,
+      until every statement is green. "分支覆盖": then both decision outcomes, 是 and 否, are traced in orange one after the other. */
+   const ed=[.6,.95,1.75,1.3,2.05],nd=[.4,.75,1.1,1.9,1.45];   // seconds into the line
+   return e.map(([x1,y1,x2,y2],k)=>`<path class="ce" data-add="2 hlEdge" style="transition-delay:${ed[k]}s" d="M${x1},${y1} L${x2},${y2}" stroke="${C.mute}" stroke-width="5" marker-end="url(#ah-gray)"/>`).join('')
+    +[[1,2.45],[2,2.95]].map(([k,d])=>{const [x1,y1,x2,y2]=e[k];return `<path class="brh" data-add="2 go" style="animation-delay:${d}s" pathLength="1" d="M${x1},${y1} L${x2},${y2}" stroke="${C.orange}" stroke-width="9" stroke-linecap="round" fill="none"/>`}).join('')
+    +n.map(([x,y,t],i)=>`<rect class="cn" data-add="2 hlNode" style="transition-delay:${nd[i]}s" x="${x-110}" y="${y-28}" width="220" height="56" rx="${i===1?28:10}" fill="#fff" stroke="${C.dark}" stroke-width="3"/>`+T(x,y,t,{size:26})).join('')
+    +[[1180,'是',2.45],[1440,'否',2.95]].map(([x,t,d])=>`<g class="brl" data-add="2 go" style="--bd:${d}s">${T(x,345,t,{size:24,fill:C.gray})}</g>`).join('')})(),'fade',{d:.4})},
+
+{ch:'03 HIL测试与黑盒测试',cues:['因此HIL 测试不能与黑盒测试画等号','HIL 测试通常采用黑盒测试技术','当然，也可以基于系统的内部结构辅助设计测试','反过来，采用黑盒测试技术也不代表一定是在进行 HIL 测试','例如，在 SIL 测试中，同样可以采用黑盒测试技术'],svg:
+ R(0,T(960,70,'HIL 测试  ≠  黑盒测试',{size:60,w:800,fill:C.red}),'pop')
+ /* two different kinds of concept: test levels (left) use test-design techniques (right) */ +R(1,B(400,260,320,110,{fill:C.redL,stroke:C.red,sw:4,t:'HIL 测试',ts:40,tc:C.red,rx:20}),'left')
+ +R(1,`<g data-add="3 glow">${B(1200,260,320,110,{fill:'#24262D',stroke:'#24262D',t:'黑盒测试技术',ts:36,tc:'#fff',rx:20})}</g>`,'right',{d:.2})
+ +R(1,A('M725,315 H1190',{c:'red',sw:6}),'draw',{d:.5})
+ +R(2,B(1200,470,320,110,{fill:'#fff',stroke:C.dark,sw:3,dash:1,t:'白盒测试技术',ts:36,rx:20}),'right')
+ +R(2,`<path d="M725,345 C900,345 1010,525 1190,525" fill="none" stroke="${C.gray}" stroke-width="4" stroke-dasharray="12 9" marker-end="url(#ah-gray)"/>`,'fade',{d:.3})
+ +R(3,B(400,470,320,110,{fill:'#fff',stroke:C.mute,sw:3,dash:1,t:'?',ts:44,tc:C.mute,rx:20}),'pop',{out:4})
+ +R(4,B(400,470,320,110,{fill:C.blueL,stroke:C.blue,sw:4,t:'SIL 测试',ts:40,tc:C.blue,rx:20}),'pop')
+ +R(4,A('M725,505 C900,505 1010,345 1190,345',{c:'blue',sw:5}),'draw',{d:.3})},
+
+{ch:'04 HIL测试的局限',cues:['那么，只进行 HIL 测试，是不是就能满足所有的测试需求？','答案是否定的'],svg:
+ /* "all testing needs" as a ring of four parts: HIL fills only one of them */
+ (()=>{const cx=960,cy=370,r=210,pt=a=>`${(cx+Math.cos(a*Math.PI/180)*r).toFixed(1)},${(cy+Math.sin(a*Math.PI/180)*r).toFixed(1)}`,
+   seg=(a0,a1,attrs)=>`<path d="M${pt(a0)} A${r},${r} 0 0 1 ${pt(a1)}" fill="none" stroke-width="80" ${attrs}/>`;
+   return [1,2,3].map(i=>R(0,seg(-90+i*90+3,-90+(i+1)*90-3,`stroke="${C.line}"`),'fade',{d:.15*i})).join('')
+     +R(0,seg(-87,-3,`class="dr" pathLength="1" stroke="${C.red}"`)+T(cx+Math.cos(-Math.PI/4)*r,cy+Math.sin(-Math.PI/4)*r,'HIL',{size:40,w:800,fill:'#fff'}),'draw',{d:.6})
+     +R(0,`<g class="pulse">${T(cx,cy,'?',{size:150,w:800,fill:C.mute})}</g>`,'pop',{d:1.2,out:1})
+     +R(1,cross(cx,cy,80).replace('data-sfx="no"','data-sfx="wrong"'),'pop')})()},   // "答案是否定的": wrong-answer buzz
+
+{ch:'04 HIL测试的局限',grad:2,cues:['最后，我们来看一下 HIL 测试存在的局限'],svg:chapter('04','HIL 测试的局限','LIMITATIONS OF HIL TESTING')},
+
+{ch:'04 HIL测试的局限',cues:['在传统的测试策略中，大部分测试工作通常集中在开发流程的后期','也就是软硬件基本完成之后','然而，软件和硬件的开发进度往往并不相同','如果软件已经开发完成，而控制器硬件尚不可用','依赖真实硬件的 HIL 测试便无法开展','如果等到软硬件集成完成后再进行测试','大量缺陷可能会在项目后期集中暴露','这不仅会增加问题定位的难度','还可能导致频繁的版本迭代和高昂的返工成本','进而影响整个项目的进度'],svg:
+ /* the chart and timelines span x 100–1185; shift them so the scene is centered */
+ `<g transform="translate(318,0)">`
+ +R(0,axis(),'draw')
+ +R(0,`<path class="hb" d="${TRAD}" fill="${C.gray}" fill-opacity=".4"/>`,'up',{d:.4})
+ /* workload above a threshold (y≈314) is shown dark red, below it light: a vertical gradient over the whole curve */
+ +R(0,`<defs><linearGradient id="lategrad" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="410" y2="140"><stop offset="0" stop-color="${C.red}" stop-opacity=".1"/><stop offset=".3" stop-color="${C.red}" stop-opacity=".16"/><stop offset=".45" stop-color="${C.red}" stop-opacity=".68"/><stop offset="1" stop-color="${C.red}" stop-opacity=".8"/></linearGradient></defs>`
+   +`<path d="${TRAD}" fill="url(#lategrad)"/>`,'fade',{d:1.4})
+ +R(2,T(140,520,'软件',{a:'start',size:30,w:800,fill:C.blue}),'fade')+R(2,`<rect x="220" y="500" width="500" height="40" rx="20" fill="${C.blue}"/>`,'grow',{d:.2})
+ +R(2,T(140,600,'硬件',{a:'start',size:30,w:800,fill:C.gray}),'fade',{d:.4})+R(2,`<rect x="220" y="580" width="900" height="40" rx="20" fill="${C.mute}"/>`,'grow',{d:.6})
+ +R(3,`<path d="M730,470 V640" stroke="${C.dark}" stroke-width="3" stroke-dasharray="8 6"/>`+check(760,520,18)+T(790,520,'已完成',{a:'start',size:26,w:700,fill:C.green})+T(730,665,'硬件尚不可用',{size:26,w:700,fill:C.gray}),'fade')
+ +R(4,P(730,735,'HIL 测试无法开展',{fill:C.redL,c:C.red,size:28})+cross(560,735,22),'pop') +[[920,220],[1010,260],[1090,215],[950,320],[1060,330],[1130,290],[990,365],[1120,370]].map(([x,y],i)=>R(6,bug(x,y,.55,C.dark),'pop',{d:i*.12})).join('')
+ +`</g>`},
+
+{ch:'04 HIL测试的局限',cues:['现代开发流程强调测试左移','也就是将测试活动提前到开发早期','通过更早地开展测试，可以尽早发现并解决缺陷','减少后期返工，加快产品交付','从而适应软件定义汽车时代快速迭代的开发节奏'],svg:
+ /* chart centered like the traditional-strategy scene */
+ `<g transform="translate(318,0)">`+axis()
+ +`<path d="${TRAD}" fill="${C.gray}" fill-opacity=".25"/>`
+ /* shift-left made visible: the outline of the late (gray) peak lifts off and slides left into the early red curve */
+ +R(1,`<path class="morphL" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`,'fade')
+ +R(1,T(460,118,'左移测试',{size:32,w:800,fill:C.red}),'up',{d:2})
+ +R(2,[[230,530],[380,560],[530,520]].map(([x,y],k)=>{const fd=2.9+k*.35,strip=v=>v.replace(/ data-sfx="[^"]*"/,'');
+     /* found → resolved: each bug pops up red, gets a green check, then shrinks away */
+     return `<g class="fix" data-add="2 go" data-sfx="bug" data-sfx-d="${fd}" style="--fd:${fd}s">`
+              +`<g class="fb">${strip(bug(x,y,.7,C.red))}</g><g class="fc">${strip(check(x+30,y-28,16))}</g></g>`
+       +`<g data-add="2 go" data-sfx="ok" data-sfx-d="${(fd+.95).toFixed(2)}"></g>`}).join(''),'fade')   /* as "发现并解决缺陷" is said */
+ +`</g>`
+},
+
+{ch:'04 HIL测试的局限',cues:['除此以外，HIL测试依赖物理仿真模型的精度','而且并不能完全复现所有真实环境','因此并不能完全替代实车测试'],svg:
+ /* chart + environment grid, moved down to sit centered vertically */
+ `<g transform="translate(0,90)">`
+ /* model accuracy, abstract: the real behaviour (solid line) and the model (blue dashed) that keeps trying to match it — never quite exact */
+ +R(0,`<path class="dr" pathLength="1" d="M140,440 C270,430 310,150 460,180 S660,380 870,250" fill="none" stroke="${C.dark}" stroke-width="7" stroke-linecap="round" style="transition-duration:1.6s"/>`
+   ,'draw')
+ +R(0,`<circle cx="870" cy="250" r="11" fill="${C.dark}"/>`,'pop',{d:1.5})   /* end dot only once the line has reached it */
+ +R(0,`<path d="M140,440 C270,420 320,210 460,215 S640,345 870,290" fill="none" stroke="${C.blue}" stroke-width="7" stroke-linecap="round" stroke-dasharray="14 12">`
+   +`<animate attributeName="d" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"`
+   +` values="M140,440 C270,420 320,210 460,215 S640,345 870,290;M140,440 C270,428 312,168 460,192 S655,372 870,262;M140,440 C270,420 320,210 460,215 S640,345 870,290"/></path>`
+   +`<circle cx="870" cy="290" r="11" fill="${C.blue}"><animate attributeName="cy" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1" values="290;262;290"/></circle>`,'fade',{d:1.2}) /* "cannot reproduce every real environment": the real world is a large area full of conditions (dots); the simulation
+    (blue dashed circle) covers only part of it — dots inside turn blue, the rest stay amber with "?" — and on the next
+    line the road test covers the remaining ones (they turn green) */
+ +R(1,`<ellipse cx="1385" cy="330" rx="390" ry="185" fill="${C.amberL}" stroke="${C.amber}" stroke-width="3"/>`,'pop')
+ +R(1,`<circle cx="1240" cy="325" r="160" fill="${C.blueL}" fill-opacity=".55" stroke="${C.blue}" stroke-width="5" stroke-dasharray="14 10"/>`,'pop',{d:.8})
+ +R(1,Array.from({length:30},(_,k)=>{const r=Math.sqrt((k+.5)/30),a=k*2.39996,x=1385+Math.cos(a)*r*345,y=330+Math.sin(a)*r*150,
+       inside=Math.hypot(x-1240,y-325)<142;
+       return `<circle class="envdot" data-add="${inside?'1 in':'2 real'}" style="--vd:${inside?(1.3+k*.03).toFixed(2):(k*.03).toFixed(2)}s" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10"/>`}).join(''),'fade',{d:.2})
+ +R(1,[[1600,235],[1680,355],[1500,445]].map(([x,y])=>`<g class="unk" data-add="2 gone">${g(x,y,`<circle r="20" fill="${C.amber}"/>`+T(0,1,'?',{size:28,w:800,fill:'#fff'}))}</g>`).join(''),'pop',{d:1.9})
+ /* real-vehicle testing: a car drives in, and the conditions the simulation can't cover turn green (see the coverage graphic) */
+ /* road test: lane marks and roadside posts scroll past while the car keeps driving (spinning wheels, slight bounce, data signal from the roof) */
+ +R(2,`<defs><clipPath id="roadclip"><rect x="120" y="515" width="1680" height="190"/></clipPath></defs>`
+   +`<path d="M120,663 H1800" stroke="${C.line}" stroke-width="6" stroke-linecap="round"/>`
+   +`<g clip-path="url(#roadclip)"><path class="roadflow" d="M100,677 H1820" stroke="${C.mute}" stroke-width="4" stroke-dasharray="34 26"/>`
+   +`<g class="posts">${Array.from({length:10},(_,i)=>`<rect x="${120+i*200}" y="619" width="8" height="40" rx="3" fill="${C.line}"/><rect x="${120+i*200}" y="623" width="8" height="8" fill="${C.red}" opacity=".6"/>`).join('')}</g></g>`,'fade')
+ +R(2,`<g class="drive" data-add="2 go" data-sfx="car"><g class="bob">${g(960,607,
+     `<path d="M-200,30 L-200,-8 Q-196,-30 -160,-36 L-105,-42 L-55,-88 L75,-88 L140,-42 L182,-32 Q200,-26 200,0 L200,30 Z" fill="${C.red}"/>`
+     +`<path d="M-88,-42 L-48,-76 L2,-76 L2,-42 Z M18,-42 L18,-76 L70,-76 L118,-42 Z" fill="#fff"/>`
+     +[-118,118].map(wx=>`<g transform="translate(${wx},32)"><g class="spin" style="animation-duration:.45s;animation-direction:normal"><circle r="30" fill="${C.dark}"/><circle r="12" fill="#E0E2E8"/><path d="M0,-24 V24 M-24,0 H24" stroke="rgba(95,104,126,.62)" stroke-width="5"/></g></g>`).join('')
+     +`<g class="sigw">${[0,1,2].map(k=>`<path d="M${-22-k*16},${-110-k*16} A${30+k*22},${30+k*22} 0 0 1 ${22+k*16},${-110-k*16}" fill="none" stroke="${C.blue}" stroke-width="6" stroke-linecap="round" style="animation-delay:${k*.25}s"/>`).join('')}</g>`
+     +`<g stroke="${C.mute}" stroke-width="6" stroke-linecap="round"><path class="spd" d="M-250,-30 H-300"/><path class="spd" d="M-240,0 H-320" style="animation-delay:.2s"/><path class="spd" d="M-250,22 H-290" style="animation-delay:.4s"/></g>`,.6)}</g></g>`,'fade')
+ +`</g>`},
+
+{ch:'04 HIL测试的局限',cues:['因此，在产品开发过程中，不能只依赖 HIL 测试','还应结合单元测试','SIL 测试','实车测试等不同层级的测试活动'],svg:
+ /* test levels stacked as equal-width bars */
+ [['实车测试',3,140,C.dark],['HIL 测试',0,270,C.red],['SIL 测试',2,400,C.blue],['单元测试',1,530,C.green]].map(([t,at,y,c])=>
+   R(at,`<rect x="600" y="${y}" width="720" height="110" rx="16" fill="${c}"/>`+T(960,y+55,t,{size:42,w:800,fill:'#fff'}),'pop')).join('')
+},
+
+{ch:'结束',grad:2,cues:['以上就是本期关于 HIL 测试的全部内容','感谢您的观看','如果您有其他感兴趣的话题，欢迎在评论区告诉我们','我们下期再见！'],svg:
+ /* three QR codes stay on screen for the whole ending; the comment hint appears below them */
+ [QR0,QR1,QR2].map((src,i)=>{const x=460+i*500,cy=270;
+   /* QR0 has no logo: add the same red Vector badge as the other two, 5 modules wide (safe for its level-M error correction) */
+   const badge=i?'':`<rect x="${x-22}" y="${cy-22}" width="44" height="44" rx="8" fill="#F62634" stroke="#fff" stroke-width="2"/><path d="${VCHEV}" fill="#fff" transform="translate(${x-10},${cy-13.5}) scale(.104) translate(-1776,0)"/>`;
+   return R(0,`<rect x="${x-170}" y="${cy-170}" width="340" height="340" rx="30" fill="#fff" class="card"/><image href="${src}" x="${x-142}" y="${cy-142}" width="284" height="284"/>${badge}`
+     +T(x,cy+215,['Vector学习路线图','Vector维克多微信公众号','维克多汽车技术Bilibili官方账号'][i],{size:28,w:700}),'up',{d:.2+i*.25})}).join('')
+ +R(2,bubble(630,665)+T(730,665,'欢迎在评论区告诉我们您感兴趣的话题',{a:'start',size:36}),'up')},
+{ch:'片尾',white:true,grad:2,lead:3.6,sfx:[[0,.2,'logo'],[0,2.3,'swell']],cues:[''],svg:outro()},
+];
+
+/* ---------- sound: adaptive tech music + sound effects ----------
+   Everything is synthesised live with Web Audio (no audio files).
+   Style: modern, minimal, friendly light electronics for an automotive-software explainer: a soft detuned pad with a
+   slowly moving filter, a quiet bouncy synth sequence with digital echo, a soft sub bass, occasional digital
+   sparkles and a clear but soft-toned upbeat groove (round kick, warm clap on 2 & 4, gentle shaker; no harsh hi-hats).
+   No lead melody, so it never competes with the narration. The air-conditioning story (hot summer, open/closed loop)
+   switches to a warmer, everyday sound: electric-piano chords over a walking bass with a lighter snap groove.
+   It follows the picture:
+   - energy (0–3) is set per line from how much animates: a static line lets the music recede (sequence filter
+     closes, bass drops out, the groove thins to kick + clap); new modules / data flows open the filter, add an
+     off-beat pluck layer and a fuller shaker pattern;
+   - key concepts and conclusions get a short lift (riser + shimmer + two brighter bars);
+   - scene changes use a short musical transition (soft swell + filter dip + low downbeat) instead of a hard cut;
+   - each scene picks a harmonic colour (intro, explain, life, bright, tense, thought, outro); it changes at the next bar.
+   Effects are small digital accents: a soft blip (at most one per line), a two-tone chime for a check mark, a low
+   tone for a cross, a soft pulse for a warning sign, glitch clicks for bugs, a filtered sub drop for explosions,
+   digital ticks for counters and a shimmer for the logo.
+   Sound starts with Play, pauses with Pause, restarts with the video and fades out over the outro. */
+const music=(()=>{
+  const BPM=128,S=60/BPM/4,FXVOL=.3;let VOL=.4;   // VOL is lowered while the recorded narration plays   // S = one sixteenth note
+  const mtof=m=>440*Math.pow(2,(m-69)/12);
+  const ch=(pad,bass,seq)=>({pad,bass,seq});   // pad voicing, bass root, 4 sequence tones
+  const PROGS={
+    E:[ch([55,60,64,71],48,[72,76,79,83]),ch([57,60,64,67],45,[69,72,76,79]),ch([53,57,60,64],41,[69,72,76,77]),ch([55,59,62,69],43,[67,71,74,79])],  // Cmaj7 Am7 Fmaj7 G6/9
+    L:[ch([53,57,60,64],41,[65,69,72,76]),ch([52,55,59,62],40,[64,67,71,74]),ch([50,53,57,60],38,[62,65,69,72]),ch([48,55,60,62],36,[60,64,67,74])],  // Fmaj7 Em7 Dm7 Cadd9 (everyday, warm)
+    B:[ch([55,60,64,67],48,[72,76,79,83]),ch([55,59,62,69],43,[71,74,79,81]),ch([57,60,64,67],45,[72,76,79,84]),ch([53,57,60,64],41,[72,76,77,81])],  // Cmaj7 G6/9 Am7 Fmaj7
+    T:[ch([50,53,57,62],38,[62,65,69,74]),ch([50,53,58,62],46,[62,65,70,74]),ch([50,55,58,62],43,[62,67,70,74]),ch([49,52,57,61],45,[61,64,69,73])],  // Dm Bb Gm A
+    D:[ch([50,57,60,64],38,[62,69,72,76]),ch([50,53,57,62],46,[62,65,69,74]),ch([53,57,60,64],41,[65,69,72,76]),ch([50,55,60,62],48,[62,67,72,74])]   // Dm9 Bbmaj7 Fmaj7 Csus2
+  };
+  // seq: synth sequence on/off; keys: electric-piano comping instead (everyday mood); cap: highest energy allowed;
+  // base: energy floor; spark: digital sparkles; drums: 0 none / 1 upbeat groove / 2 light snap groove / 3 half-time / 4 dark half-time groove
+  const MOODS={
+    intro:  {prog:'E',seq:0,keys:0,cap:0,base:0,spark:1,drums:0},
+    explain:{prog:'E',seq:1,keys:0,cap:3,base:2,spark:1,drums:1},
+    life:   {prog:'L',seq:0,keys:1,cap:3,base:2,spark:0,drums:1},
+    bright: {prog:'B',seq:1,keys:0,cap:3,base:2,spark:1,drums:1},
+    tense:  {prog:'T',seq:1,keys:0,cap:1,base:1,spark:0,drums:4},   // the three accidents: dark, restrained half-time
+    thought:{prog:'D',seq:1,keys:0,cap:3,base:2,spark:0,drums:1},
+    outro:  {prog:'E',seq:0,keys:0,cap:0,base:0,spark:1,drums:0}
+  };
+  /* per-chapter arpeggio figures through the chord tones (4 = top tone an octave up, -1 = rest): 01, 02, 03, 04, intro/ending */
+  const SEQS=[[0,2,1,3,-1,2,4,2,0,2,1,3,2,-1,4,1],[0,-1,4,-1,2,-1,4,1,0,-1,4,-1,3,-1,4,2],[0,1,2,3,-1,-1,2,1,0,1,2,3,4,-1,3,-1],[3,2,1,0,-1,1,2,-1,3,2,1,0,4,-1,2,-1],[0,2,1,3,-1,2,4,2,0,2,1,3,2,-1,4,1]];
+  const KEYS=[0,-1,-1,1,-1,-1,2,-1,0,-1,-1,1,-1,3,-1,-1];   // electric-piano comping rhythm, everyday mood
+  let mel=4,wantMel=4,duck,hatP,shkP,bellP,tr=0,wantTr=0,fill=0,padBus,loops=[],ctx,master,fx,delay,seqF,timer=null,step=0,next=0,on=true,fxOn=true,fading=false,mood='intro',want='intro',mbar=0,chord=PROGS.E[0],
+      energy=0,lift=0;   // lift: bars of emphasis left
+  function init(){
+    ctx=new (window.AudioContext||window.webkitAudioContext)();
+    /* glue compressor -> make-up gain (louder music) -> limiter, so the louder mix never clips */
+    const comp=ctx.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=4;comp.knee.value=10;comp.attack.value=.01;comp.release.value=.2;
+    const makeup=ctx.createGain();makeup.gain.value=1.8;
+    const lim=ctx.createDynamicsCompressor();lim.threshold.value=-3;lim.ratio.value=20;lim.knee.value=0;lim.attack.value=.002;lim.release.value=.1;
+    comp.connect(makeup);makeup.connect(lim);lim.connect(ctx.destination);
+    /* duck: dips the music while a sentence is being spoken and lets it swell back in the pauses (driven by the narration timing) */
+    duck=ctx.createGain();duck.connect(comp);
+    master=ctx.createGain();master.gain.value=0;master.connect(duck);
+    /* stereo: hats left, shaker right, bell/plucks slightly right, echoes slightly left — the centre stays free for the voice */
+    const pan=v=>{const p=ctx.createStereoPanner();p.pan.value=v;p.connect(master);return p};
+    hatP=pan(-.45);shkP=pan(.45);bellP=pan(.3);
+    fx=ctx.createGain();fx.gain.value=FXVOL;fx.connect(comp);
+    delay=ctx.createDelay(1);delay.delayTime.value=S*3;
+    const fb=ctx.createGain();fb.gain.value=.3;const wet=ctx.createGain();wet.gain.value=.3;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=500;
+    delay.connect(hp);hp.connect(fb);fb.connect(delay);hp.connect(wet);wet.connect(pan(-.35));
+    /* pads: a few ms of extra delay on the right channel widens them without moving them off centre */
+    padBus=ctx.createGain();{const m=ctx.createChannelMerger(2),dR=ctx.createDelay(.05);dR.delayTime.value=.012;padBus.connect(m,0,0);padBus.connect(dR);dR.connect(m,0,1);m.connect(master)}
+    seqF=ctx.createBiquadFilter();seqF.type='lowpass';seqF.frequency.value=700;seqF.Q.value=3;seqF.connect(master);seqF.connect(delay);
+  }
+  const noiseBuf=()=>{if(!init.n){init.n=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=init.n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}return init.n};
+  const env=(g,t,peak,a,len)=>{g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+len)};
+  const osc=(type,f,t,len,out,g)=>{const o=ctx.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t);o.connect(g);g.connect(out);o.start(t);o.stop(t+len+.05);return o};
+  const noiseSrc=(t,len)=>{const n=ctx.createBufferSource();n.buffer=noiseBuf();n.start(t);n.stop(t+len);return n};
+  const lvl=()=>{const M=MOODS[mood];return Math.min(M.cap,Math.max(M.base,energy)+(lift?1:0))};
+  /* ---- music voices ---- */
+  // soft detuned pad, its filter breathing slowly
+  function pad(notes,t,dur,bright){
+    const f=ctx.createBiquadFilter();f.type='lowpass';f.Q.value=.6;f.frequency.setValueAtTime(700+bright*250,t);f.frequency.linearRampToValueAtTime(1200+bright*350,t+dur/2);f.frequency.linearRampToValueAtTime(700+bright*250,t+dur);
+    const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.03,t+1);g.gain.setValueAtTime(.03,t+dur-.3);g.gain.linearRampToValueAtTime(0,t+dur+1);
+    f.connect(g);g.connect(padBus);
+    notes.forEach(n=>[-9,9].forEach(c=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtof(n);o.detune.value=c;o.connect(f);o.start(t);o.stop(t+dur+1.1)}));
+  }
+  function seqNote(n,t,v){const g=ctx.createGain();env(g,t,v,.004,S*1.8);osc('triangle',mtof(n),t,S*1.8,seqF,g);const g2=ctx.createGain();env(g2,t,v*.35,.003,S);osc('square',mtof(n),t,S,seqF,g2)}
+  // electric piano: sine body + a soft bell-like 2nd partial, gentle decay
+  function keys(notes,t,v){notes.forEach(n=>{const g=ctx.createGain(),g2=ctx.createGain();env(g,t,v,.006,.9);env(g2,t,v*.25,.003,.25);osc('sine',mtof(n),t,.9,master,g);osc('sine',mtof(n)*2,t,.25,master,g2)})}
+  function pluckBass(n,t){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.frequency.value=700;env(g,t,.16,.005,.35);f.connect(g);g.connect(master);const o=ctx.createOscillator();o.type='triangle';o.frequency.value=mtof(n);o.connect(f);o.start(t);o.stop(t+.4)}
+  function kick(t,v){v*=1.35;const g=ctx.createGain();env(g,t,v,.003,.3);const o=osc('sine',150,t,.3,master,g);o.frequency.exponentialRampToValueAtTime(48,t+.09);
+    const c=ctx.createGain();env(c,t,v*.5,.001,.025);osc('triangle',1100,t,.03,master,c)}   // short click on top so the beat cuts through the voice
+  function hat(t,v){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='highpass';f.frequency.value=7500;env(g,t,v,.001,.045);noiseSrc(t,.06).connect(f);f.connect(g);g.connect(hatP)}
+  function clap(t,v){v*=1.45;{const b=ctx.createGain();env(b,t,v*.9,.002,.11);const o=osc('triangle',200,t,.12,master,b);o.frequency.exponentialRampToValueAtTime(150,t+.1)}   // snare body under the clap
+    const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=1300;f.Q.value=.9;f.connect(g);g.connect(master);g.connect(delay);
+    g.gain.setValueAtTime(0,t);[0,.011,.022].forEach(d=>{g.gain.linearRampToValueAtTime(v,t+d+.002);g.gain.linearRampToValueAtTime(v*.3,t+d+.009)});g.gain.exponentialRampToValueAtTime(.0001,t+.16);noiseSrc(t,.18).connect(f)}
+  function snap(t,v){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=2200;f.Q.value=2;env(g,t,v,.002,.07);noiseSrc(t,.09).connect(f);f.connect(g);g.connect(master)}
+  function shaker(t,v){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=4800;f.Q.value=1.4;env(g,t,v,.014,.07);noiseSrc(t,.09).connect(f);f.connect(g);g.connect(shkP)}
+  function pump(t){padBus.gain.cancelScheduledValues(t);padBus.gain.setValueAtTime(.45,t);padBus.gain.linearRampToValueAtTime(1,t+S*3)}
+  function stab(notes,t,v){notes.forEach(n=>{const g=ctx.createGain();env(g,t,v,.003,.16);osc('triangle',mtof(n),t,.16,padBus,g)})}   // off-beat chord stab (pumps with the kick)
+  function bell(n,t,v){const g=ctx.createGain(),g2=ctx.createGain();env(g,t,v,.003,.5);env(g2,t,v*.4,.002,.12);g.connect(delay);osc('sine',mtof(n),t,.5,bellP,g);osc('sine',mtof(n)*3,t,.12,bellP,g2)}
+  function mari(n,t,v){const g=ctx.createGain(),g2=ctx.createGain();env(g,t,v*1.1,.002,.28);env(g2,t,v*.3,.001,.06);osc('triangle',mtof(n),t,.28,bellP,g);osc('sine',mtof(n)*4,t,.06,bellP,g2)}   // marimba-like
+  function softLead(n,t,v,dark){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.frequency.value=dark?900:2400;f.connect(bellP);f.connect(delay);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+(dark?1.6:.8));
+    const o=ctx.createOscillator();o.type='triangle';o.frequency.value=mtof(n);o.connect(g);g.connect(f);o.start(t);o.stop(t+(dark?1.7:.9))}
+  const lead=(k,n,t,v)=>k==='mari'?mari(n,t,v):k==='soft'?softLead(n,t,v*1.1):bell(n,t,v);
+  function crash(t){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='highpass';f.frequency.value=4500;env(g,t,.05,.005,1.6);noiseSrc(t,1.7).connect(f);f.connect(g);g.connect(master)}
+  function offPluck(n,t){const g=ctx.createGain();env(g,t,.035,.003,.18);g.connect(delay);osc('sine',mtof(n+12),t,.18,bellP,g)}
+  function sub(n,t,len){const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.13,t+.04);g.gain.setValueAtTime(.13,t+len-.15);g.gain.linearRampToValueAtTime(0,t+len);osc('sine',mtof(n),t,len,master,g)}
+  function sparkle(t){const n=chord.seq[3]+12,g=ctx.createGain();env(g,t,.03,.002,.6);g.connect(delay);osc('sine',mtof(n),t,.6,bellP,g)}
+  // a playful hook over 2 bars (chord-tone indices, -1 = rest) — plays in the "B" half of every 16-bar section
+  /* a different 4-bar melody for each chapter (chord-tone indices, -1 = rest), each with its own lead sound, so the 10 minutes don't
+     sound like one loop: 01 bell (curious), 02 marimba (bright, syncopated), 03 soft lead (thoughtful), 04 bell (forward-looking), intro/ending soft */
+  const HOOKS=[[0,-1,-1,2,-1,-1,1,-1,3,-1,2,-1,-1,-1,-1,-1,2,-1,-1,3,-1,-1,2,-1,1,-1,0,-1,-1,-1,-1,-1,0,-1,2,-1,3,-1,4,-1,-1,-1,3,-1,2,-1,-1,-1,1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [4,-1,3,-1,-1,2,-1,3,-1,-1,4,-1,-1,-1,-1,-1,3,-1,2,-1,-1,1,-1,2,-1,-1,0,-1,-1,-1,-1,-1,0,-1,1,-1,2,-1,3,-1,4,-1,-1,-1,3,-1,4,-1,-1,-1,4,-1,-1,-1,3,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [2,-1,-1,-1,1,-1,-1,-1,0,-1,-1,-1,1,-1,2,-1,3,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,3,-1,-1,-1,4,-1,-1,-1,3,-1,1,-1,2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [1,-1,1,-1,2,-1,-1,-1,1,-1,0,-1,-1,-1,-1,-1,1,-1,1,-1,3,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,2,-1,2,-1,4,-1,-1,-1,3,-1,2,-1,1,-1,-1,-1,0,-1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
+    [0,-1,-1,-1,2,-1,-1,-1,4,-1,-1,-1,-1,-1,-1,-1,3,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,-1,-1,-1,2,-1,-1,-1,3,-1,-1,-1,4,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]],LEADS=['bell','mari','soft','bell','soft'];
+  /* the accidents: a slow, low minor motif in a muffled tone with a long echo */
+  const DARK=[2,-1,-1,-1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,-1,-1,3,-1,2,-1,-1,-1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1];
+  function sched(){
+    while(next<ctx.currentTime+.2){
+      const i=step%16;
+      if(i===0){if(wantMel!==mel){mel=wantMel}if(want!==mood||wantTr!==tr){mood=want;tr=wantTr;mbar=0}else if(step)mbar++;if(lift)lift--;if(fill===2){crash(next);fill=0}}
+      const M=MOODS[mood],L=lvl(),T=n=>n+tr,sec=mbar%16,B=sec>=8,brk=false;   // B half: hook on; bar 16: breakdown (no kick)
+      chord=PROGS[M.prog][mbar%4];
+      if(i===0){pad(chord.pad.map(T),next,S*16,L);seqF.frequency.setTargetAtTime(M.drums===4?520:[650,1100,1800,2800][L],next,.3);if(sec===0&&mbar&&M.drums===1)crash(next)}
+      const Q=SEQS[mel];if(M.seq&&Q[i]>=0)seqNote(T(Q[i]===4?chord.seq[0]+12:chord.seq[Q[i]]),next,i%4===0?.05:.036);
+      if(M.keys){const k=KEYS[i];if(k>=0)keys([T(chord.seq[k]),T(chord.seq[(k+2)%4])],next,i===0?.05:.04);
+        if(i%4===0)pluckBass(T(chord.bass+[0,7,12,7][i/4]),next)}
+      else if(M.drums===4){if(i===0||i===6||i===10)pluckBass(T(chord.bass),next);if(i===0)sub(T(chord.bass),next,S*16)}   // dark: sparse bass + a held low drone
+      else if(L>=1&&i%2===0&&!brk)pluckBass(T(chord.bass+(i===6||i===14?12:0)),next);   // pulsing 8th-note bass drives it forward
+      if(L>=1&&i===0&&!M.keys&&!brk&&M.drums!==4)sub(T(chord.bass),next,S*4);
+      if(M.drums===1&&i%4===2&&!brk)stab([chord.pad[1],chord.pad[2],chord.pad[3]].map(n=>T(n+12)),next,.022);   // bouncy off-beat chord stabs
+      if((M.drums===1||mood==='life')&&B){const h=HOOKS[mel][(mbar%4)*16+i];if(h>=0)lead(LEADS[mel],T((h===4?chord.seq[0]+12:chord.seq[h])+12),next,.05)}
+      if(M.drums===4){const h=DARK[(mbar%4)*16+i];if(h>=0)softLead(T(chord.seq[h]-12),next,.07,true)}   // accidents: slow low motif
+      if(L>=2&&i%4===2)offPluck(T(chord.seq[(i/2+mbar)%4]),next);
+      if(L>=3&&i%4===3&&i!==15)offPluck(T(chord.seq[(i+1)%4]),next);
+      if(M.drums===1&&!brk){   // upbeat groove: kick on every beat (pads pump with it), clap 2 & 4, off-beat shaker, 16ths when busy
+        if(i%4===0){kick(next,i%8===0?.22:.17);pump(next)}
+        if(L>=2&&i===10)kick(next,.12);
+        if(i===4||i===12)clap(next,.11);
+        if(i%4===2){hat(next,.07);shaker(next,.03)}else if(i%2===1)hat(next,L>=2||B?.03:.02);
+        if((L>=3||sec===7)&&i===15)clap(next,.05)}
+      if(brk&&i>=12)clap(next,.03+(i-12)*.02);   // breakdown bar: a short clap build into the next section
+      if(M.drums===2){   // light everyday groove: soft kick, finger snaps on 2 & 4, shaker on the off-beats
+        if(i===0||i===8||(L>=2&&i===10)){kick(next,.17);pump(next)}
+        if(i===4||i===12)snap(next,.1);
+        if(i%4===2)shaker(next,.022)}
+      if(M.drums===3&&i===0)kick(next,.18);   // tense: a single half-time pulse
+      if(M.drums===4){   // dark half-time: heavy kick on 1 (+ a push before 3), one deep backbeat on 3, quiet off-beat hats
+        if(i===0){kick(next,.24);pump(next)}
+        if(i===10)kick(next,.13);
+        if(i===8)clap(next,.12);
+        if(i%4===2)hat(next,.03)}
+      if(M.spark&&i===10&&mbar%2===1)sparkle(next);
+      if(fill===1&&i>=8){clap(next,.03+(i-8)*.012);if(i===15)fill=2}   // chapter change: clap roll into a crash on the next downbeat
+      next+=S;step++;
+    }
+  }
+  const level=(v,sec)=>{if(!ctx)return;const t=ctx.currentTime;master.gain.cancelScheduledValues(t);master.gain.setValueAtTime(master.gain.value,t);master.gain.linearRampToValueAtTime(v,t+sec)};
+  /* ---- effects: small digital accents ---- */
+  const FX={
+    pop(t){const n=chord.seq[1]+12,g=ctx.createGain();env(g,t,.05,.002,.12);g.connect(delay);osc('sine',mtof(n),t,.12,fx,g)},
+    trans(t){   // scene change: soft swell into the new scene, the sequence filter dips and reopens, low downbeat
+      const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='highpass';f.frequency.setValueAtTime(1500,t);f.frequency.exponentialRampToValueAtTime(5000,t+.5);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.06,t+.45);g.gain.linearRampToValueAtTime(0,t+.55);noiseSrc(t,.6).connect(f);f.connect(g);g.connect(fx);
+      seqF.frequency.cancelScheduledValues(t);seqF.frequency.setValueAtTime(seqF.frequency.value,t);seqF.frequency.linearRampToValueAtTime(400,t+.35);seqF.frequency.setTargetAtTime([650,1100,1800,2800][lvl()],t+.55,.5);
+      const g2=ctx.createGain();env(g2,t+.55,.14,.01,.9);osc('sine',mtof(chord.bass),t+.55,.9,fx,g2)},
+    lift(t){   // key concept / conclusion: short riser and an open-filter shimmer
+      const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.Q.value=2;f.frequency.setValueAtTime(800,t);f.frequency.exponentialRampToValueAtTime(6000,t+.9);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.05,t+.8);g.gain.linearRampToValueAtTime(0,t+1);noiseSrc(t,1).connect(f);f.connect(g);g.connect(fx);
+      chord.seq.forEach((m,k)=>{const g2=ctx.createGain();env(g2,t+.9+k*.06,.03,.003,.8);g2.connect(delay);osc('sine',mtof(m+12),t+.9+k*.06,.8,fx,g2)})},
+    ok(t){[0,.09].forEach((d,k)=>{const g=ctx.createGain();env(g,t+d,.07,.003,.35);g.connect(delay);osc('sine',mtof(k?88:84),t+d,.35,fx,g)})},
+    no(t){const g=ctx.createGain(),f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=700;env(g,t,.09,.005,.3);f.connect(g);g.connect(fx);
+      const o=ctx.createOscillator();o.type='square';o.frequency.setValueAtTime(196,t);o.frequency.linearRampToValueAtTime(147,t+.25);o.connect(f);o.start(t);o.stop(t+.32)},
+    wrong(t){   // a soft "no": two gentle descending tones (a falling minor third, marimba-like) with a light echo and a faint low pulse
+      [[69,0],[66,.2]].forEach(([m,d])=>{const g=ctx.createGain(),g2=ctx.createGain();env(g,t+d,.1,.006,.55);env(g2,t+d,.03,.003,.12);g.connect(delay);
+        osc('triangle',mtof(m),t+d,.55,fx,g);osc('sine',mtof(m)*2,t+d,.12,fx,g2)});
+      const g3=ctx.createGain();env(g3,t+.2,.08,.01,.4);osc('sine',mtof(42),t+.2,.4,fx,g3)},
+    alert(t){[0,.2].forEach(d=>{const g=ctx.createGain();env(g,t+d,.06,.01,.16);osc('triangle',740,t+d,.16,fx,g)})},
+    bug(t){[0,.03,.075].forEach(d=>{const g=ctx.createGain();env(g,t+d,.05,.001,.02);osc('square',2000+Math.random()*3000,t+d,.02,fx,g)})},
+    boom(t){const g=ctx.createGain();env(g,t,.3,.01,1.1);const o=osc('sine',75,t,1.1,fx,g);o.frequency.exponentialRampToValueAtTime(30,t+.9);
+      const f=ctx.createBiquadFilter(),g2=ctx.createGain();f.type='lowpass';f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(100,t+.9);env(g2,t,.15,.005,.9);noiseSrc(t,1).connect(f);f.connect(g2);g2.connect(fx)},
+    tick(t){const g=ctx.createGain();env(g,t,.06,.001,.03);osc('sine',2600,t,.03,fx,g)},
+    car(t){   // the road-test car: engine revs up as it drives in, then a steady low hum + tyre/road noise until the scene ends
+      const out=ctx.createGain();out.gain.setValueAtTime(0,t);out.gain.linearRampToValueAtTime(1,t+.6);out.connect(fx);loops.push(out);
+      const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(260,t);f.frequency.linearRampToValueAtTime(420,t+1.4);f.frequency.linearRampToValueAtTime(320,t+2.4);
+      const eg=ctx.createGain();eg.gain.value=.09;f.connect(eg);eg.connect(out);
+      const trem=ctx.createOscillator(),tg=ctx.createGain();trem.frequency.value=22;tg.gain.value=.03;trem.connect(tg);tg.connect(eg.gain);trem.start(t);
+      [[1,'sawtooth'],[2,'triangle']].forEach(([m,type])=>{const o=ctx.createOscillator();o.type=type;o.frequency.setValueAtTime(38*m,t);o.frequency.linearRampToValueAtTime(62*m,t+1.4);o.frequency.linearRampToValueAtTime(52*m,t+2.4);o.connect(f);o.start(t);out._src=(out._src||[]).concat(o)});
+      const rf=ctx.createBiquadFilter(),rg=ctx.createGain();rf.type='bandpass';rf.frequency.value=480;rf.Q.value=.7;rg.gain.value=.035;
+      const n=ctx.createBufferSource();n.buffer=noiseBuf();n.loop=true;n.connect(rf);rf.connect(rg);rg.connect(out);n.start(t);out._src.push(n,trem)},
+    whoosh(t){FX.trans(t)},
+    swell(t){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.frequency.setValueAtTime(300,t);f.frequency.exponentialRampToValueAtTime(2200,t+1.6);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.06,t+1.4);g.gain.linearRampToValueAtTime(0,t+2.2);f.connect(g);g.connect(fx);
+      [57,64].forEach(m=>[-8,8].forEach(c=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtof(m);o.detune.value=c;o.connect(f);o.start(t);o.stop(t+2.3)}))},
+    logo(t){[76,79,83,88].forEach((m,k)=>{const g=ctx.createGain();env(g,t+k*.08,.05,.003,1);g.connect(delay);osc('sine',mtof(m),t+k*.08,1,fx,g)})}
+  };
+  return{
+    start(fromStart){if(!ctx)init();ctx.resume();
+      if(fromStart||!timer){step=0;mbar=0;tr=wantTr;fill=0;next=ctx.currentTime+.1;fading=false;mood=want;energy=0;lift=0}
+      if(!timer)timer=setInterval(sched,25);
+      if(!fading)level(on?VOL:0,fromStart?1.5:.6)},
+    pause(){ctx&&ctx.suspend()},
+    warm(){if(!ctx)init();ctx.resume()},   // create/unlock the audio context inside a user click
+    /* fade out and stop running sound loops (the car) — on scene change and restart */
+    stopLoops(){if(!ctx)return;const t=ctx.currentTime;loops.forEach(g=>{g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.6);(g._src||[]).forEach(o=>o.stop(t+.7))});loops=[]},
+    setMood(m){want=m},
+    /* new chapter: move to the chapter's key and play a short build (riser + clap roll + crash) into it */
+    melody(k){wantMel=k},
+    chapter(key){wantTr=key;if(ctx&&playing){fill=1;FX.lift(ctx.currentTime+.05)}},
+    /* animation energy of the current line (0–3); emph: a key concept/conclusion lifts the next two bars */
+    energy(e,emph){energy=e;if(emph&&playing&&ctx){lift=2;FX.lift(ctx.currentTime+.05)}
+      if(ctx&&playing)seqF.frequency.setTargetAtTime([650,1100,1800,2800][lvl()],ctx.currentTime,.6)},
+    cue(last,dur){if(last){fading=true;level(0,dur)}else if(fading){fading=false;level(on?VOL:0,.8)}},
+    toggle(v){on=v;if(!fading)level(on?VOL:0,.4)},
+    toggleFx(v){fxOn=v},
+    setVol(v){VOL=v;if(!fading)level(on?VOL:0,.5)},
+    duck(on){if(!ctx||on===duck._on)return;duck._on=on;duck.gain.setTargetAtTime(on?.74:1,ctx.currentTime,on?.06:.3)},
+    sfx(name,delay=0){if(!ctx||!fxOn||!playing||!FX[name])return;FX[name](ctx.currentTime+.03+delay/speed)}
+  };
+})();
+/* mood of each scene: by chapter, with the accident cases tense, the air-conditioning story everyday and the shift-left scene bright */
+function sceneMood(s){
+  if(s.mood)return s.mood;
+  if(s.ch==='开场')return 'intro';
+  if(s.ch==='片尾')return 'outro';
+  if(/Therac-25|mcoMove|class="rk/.test(s.svg))return 'tense';
+  if(s.cues.some(c=>/炎热的夏天|开环控制|打开车窗/.test(c)))return 'life';
+  if(s.cues.some(c=>c.includes('测试左移')))return 'bright';
+  if(/^02|^结束/.test(s.ch))return 'bright';
+  if(/^04/.test(s.ch))return 'thought';
+  return 'explain';
+}
+/* effects for one cue: the scene's own timeline (s.sfx), sounds tagged on newly shown elements (data-sfx), else a soft pop */
+/* key concepts / conclusions: chapter title cards and lines that state a definition or a conclusion */
+const KEY=/这就是|正是|所谓|即硬件在环|答案是|因此|所以|核心|关键|最重要|不能/;
+function cueEnergy(s,ci,shown,added){
+  const moving=/class="(sig|flow|spin|cycspin|drive|roadflow)|animateMotion/.test(s.svg)?1:0;
+  const n=shown.length+added.length,e=Math.min(3,(n===0?0:n<=2?1:2)+moving);
+  music.energy(e,(ci===0&&/font-size="220"/.test(s.svg))||KEY.test(s.cues[ci]||''));
+}
+function cueSfx(s,ci,shown,added){
+  cueEnergy(s,ci,shown,added);
+  (s.sfx||[]).filter(x=>x[0]===ci).forEach(([,d,n])=>music.sfx(n,d));
+  let n=0,pop=ci>0;   // one soft pop per line at most, none when the scene first appears
+  shown.forEach(e=>{const d=parseFloat(e.style.transitionDelay)||0,tags=[...e.querySelectorAll('[data-sfx]:not([data-add])')].map(t=>t.dataset.sfx);   // [data-add] ones sound when their class switches on
+    if(tags.length){pop=false;[...new Set(tags)].forEach(t=>{if(n++<8)music.sfx(t,d)})}});
+  if(pop&&shown.length)music.sfx('pop',parseFloat(shown[0].style.transitionDelay)||0);
+  added.forEach(e=>{if(e.dataset.sfx&&n++<10)music.sfx(e.dataset.sfx,(parseFloat(e.dataset.sfxD)||0)+(parseFloat(e.style.getPropertyValue('--vd'))||0))});
+}
+
+/* ---------- player ---------- */
+const $=id=>document.getElementById(id);
+const stage=$('stage'),scn=$('scn'),sub=$('sub'),subT=sub.firstElementChild,chap=$('chap');
+const flat=[];scenes.forEach((s,si)=>s.cues.forEach((text,ci)=>flat.push({si,ci,text})));
+const wt=s=>{let w=0;for(const ch of s)w+=/[\x00-\xff]/.test(ch)?(/\s/.test(ch)?.1:.4):(/[，。：；？！、]/.test(ch)?.5:1);return w};
+/* recorded narration: start / end (s) of every spoken line in assets/narration.m4a, found automatically from the pauses
+   between sentences and matched to the 137 lines; edit a number here to nudge a line. The opening logo plays for
+   `lead` seconds before the voice starts. */
+const NARR={src:'assets/narration.m4a',lead:1.5,
+  starts:[0.12, 3.48, 7.76, 12.82, 15.88, 20.44, 24.34, 27.96, 31.36, 37.7, 40.72, 47.9, 53.08, 56, 59.44, 65.26, 70.78, 74.8, 79.28, 82.92, 87.42, 89.56, 95.16, 99.14, 102.46, 106.22, 109.58, 112.64, 113.76, 117.46, 122.92, 126.36, 129.7, 133.68, 138.68, 143.4, 145.7, 152.2, 157.26, 161.94, 165.3, 170.32, 177.42, 181.08, 184.36, 188, 192.56, 196.9, 201.84, 209.28, 214.1, 219.04, 223.8, 229.5, 235.76, 240.86, 247.76, 253.74, 256.06, 257.28, 259.98, 264.08, 272.04, 278.42, 283.66, 289.18, 296.08, 301.92, 304.74, 308.8, 313.3, 318.64, 323.72, 329.24, 335.36, 340.76, 346.3, 352.5, 358.3, 363.6, 367.26, 374.24, 379.98, 387.98, 393.3, 399.1, 404.7, 408.84, 414.74, 422.44, 426.26, 429.96, 432.86, 438.12, 443.02, 446.92, 455.3, 460.56, 467.7, 470.26, 477.28, 481.24, 489.32, 494.74, 498.68, 502.18, 507.48, 513.92, 520.44, 525.7, 527.78, 532.64, 539.22, 542.58, 547.08, 552.32, 556.5, 560.44, 565.02, 567.8, 573.18, 576.8, 579.78, 583.82, 589.66, 593.22, 598.96, 603.2, 607.38, 612.14, 617.7, 620.56, 621.9, 626.6, 630.24, 632.1, 636.78],
+  ends:[2.62, 6.26, 11.94, 14.98, 19.52, 22.74, 27.54, 29.34, 35.96, 39.6, 46.48, 52.3, 54.42, 59, 64.34, 70.14, 72.68, 78.68, 82.22, 85.56, 89.2, 94.08, 98.38, 101.5, 105.52, 109.08, 111.18, 113.46, 116.74, 121.2, 126, 128.18, 133.04, 138.14, 141.58, 145.08, 151.24, 155.2, 160.72, 164.3, 167.82, 175.78, 180.48, 183.56, 187.76, 190.42, 196.4, 200.56, 207.12, 213.18, 217.36, 222.74, 228.74, 233.54, 240.2, 245.96, 252.3, 255.48, 257.06, 258.72, 263.48, 269.68, 276.66, 283.14, 287.82, 294.76, 299.84, 303.88, 308.2, 312.14, 316.9, 322.38, 328.14, 333.4, 339.7, 345.36, 349.64, 357.72, 362.22, 366.48, 372.02, 378.6, 386.94, 392.42, 397.56, 403.56, 408.14, 413.82, 420.18, 425.32, 429.66, 431.14, 437.36, 442.04, 445.56, 452.04, 459.8, 466.6, 469.74, 475.04, 480.2, 488.08, 493, 497.98, 501.36, 506, 513.02, 518.52, 525, 526.9, 530.92, 538.66, 541.32, 546.36, 551.08, 555.04, 559.7, 563.78, 567.42, 572.2, 575.26, 579.16, 582.96, 588.38, 592.44, 597.48, 602.56, 606.52, 610.3, 616.7, 619.28, 621.28, 624.66, 629.76, 631.28, 636.1, 637.98]};
+let total=0,narrOn=flat.filter(c=>c.text).length===NARR.starts.length;
+const prog=$('prog');
+function timing(){
+  if(narrOn){const N=NARR.starts.length;   // each line starts just before its words are heard; the outro follows the last line
+    flat.forEach((c,i)=>{c.t0=i===0?0:i<N?NARR.lead+NARR.starts[i]-.15:NARR.lead+NARR.ends[N-1]+.6});
+    flat.forEach((c,i)=>{c.dur=i<flat.length-1?flat[i+1].t0-c.t0:6.2})}
+  else{let acc=0;flat.forEach(c=>{c.dur=Math.max(2,.6+wt(c.text)*.24)+(c.ci===0?.6+(scenes[c.si].lead||0):0);c.t0=acc;acc+=c.dur})}
+  const l=flat[flat.length-1];total=l.t0+l.dur;
+  prog.querySelectorAll('b').forEach(b=>b.remove());let marks='';
+  scenes.forEach((s,si)=>{const c=flat.find(f=>f.si===si);marks+=`<b style="left:${c.t0/total*100}%"></b>`});prog.insertAdjacentHTML('beforeend',marks)}
+timing();
+
+const SUB_LAG=.25;   // seconds the subtitle appears after the voice
+let subTimer=null,pos=0,cur=-1,root=null,playing=false,timer=null,token=0,speed=1.1,voiceOn=false,zhVoice=null;
+function render(si){cur=si;const s=scenes[si],old=[...scn.querySelectorAll('.scene:not(.out)')];
+  music.setMood(sceneMood(s));music.stopLoops();
+  /* chapter key: each part of the video sits in its own key, so the music freshens at every chapter */
+  const cid=s.ch.slice(0,2),KEYS_BY_CHAP={'01':0,'02':2,'03':-3,'04':3,'结束':0};
+  music.melody({'01':0,'02':1,'03':2,'04':3}[cid]??4);   // each chapter has its own melody
+  if(old.length&&cid!==render._chap)music.chapter(KEYS_BY_CHAP[cid]??0);if(old.length)music.sfx('trans');render._chap=cid;
+  /* soft: the next page continues the same picture — show it at once underneath and only fade the old page out (no zoom/blur) */
+  scn.insertAdjacentHTML('afterbegin',`<div class="scene${s.soft?' soft':''}${s.grad===2?' g':''}"><svg viewBox="0 0 1920 800" xmlns="http://www.w3.org/2000/svg">${s.svg}</svg></div>`);root=scn.firstElementChild;
+  old.forEach(o=>{o.classList.add('out');if(s.soft)o.classList.add('soft');setTimeout(()=>o.remove(),750)});chap.textContent=s.ch;stage.classList.toggle('dark',!!s.dark);stage.classList.toggle('white',!!s.white);stage.classList.toggle('grad',!!s.grad);root.getBoundingClientRect()}
+function apply(ci){const s=scenes[cur],shown=[],added=[];
+  root.querySelectorAll('[data-at]').forEach(e=>{const out=e.dataset.out,v=ci>=+e.dataset.at&&!(out!=null&&ci>=+out);if(v&&!e.classList.contains('on'))shown.push(e);e.classList.toggle('on',v)});
+  root.querySelectorAll('[data-add]').forEach(e=>{const [k,cls]=e.dataset.add.split(' '),v=ci>=+k;if(v&&!e.classList.contains(cls))added.push(e);else if(!v&&e.classList.contains(cls)&&e.dataset.sfx==='car')music.stopLoops();e.classList.toggle(cls,v)});
+  headsAfterDraw(shown);
+  cueSfx(s,ci,shown,added);
+  s.hook&&s.hook(ci,root)}
+/* arrows that draw in: hide the arrowhead until the line has reached it, so the head never appears before the shaft */
+function headsAfterDraw(shown){shown.forEach(e=>{if(!e.classList.contains('draw'))return;const d=parseFloat(e.style.transitionDelay)||0;
+  e.querySelectorAll('.dr[marker-end],.dr[data-mk]').forEach(p=>{const mk=p.dataset.mk||p.getAttribute('marker-end'),ms=p.dataset.ms||p.getAttribute('marker-start')||'';
+    p.dataset.mk=mk;p.dataset.ms=ms;p.removeAttribute('marker-end');p.removeAttribute('marker-start');
+    const dur=parseFloat(getComputedStyle(p).transitionDuration)||1.5;setTimeout(()=>{if(e.classList.contains('on')){p.setAttribute('marker-end',mk);if(ms)p.setAttribute('marker-start',ms)}},(d+dur)*1000-80)})})}
+const fmt=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+function go(p){p=Math.max(0,Math.min(flat.length-1,p));pos=p;const c=flat[p];music.cue(p===flat.length-1,c.dur/speed);
+  if(c.si!==cur)render(c.si);apply(c.ci);
+  /* with the recorded voice, the subtitle follows slightly after the words start (the picture still leads) */
+  clearTimeout(subTimer);const showSub=()=>{subT.textContent=c.text;sub.classList.remove('anim');void sub.offsetWidth;sub.classList.add('anim')};
+  // the first line waits until "大家好" has been heard (the voice starts after the logo lead; "大家好" ends ~0.6 s in)
+  if(narrOn&&playing&&p===0){subT.textContent='';subTimer=setTimeout(showSub,(NARR.lead+.62)*1000/speed)}
+  else if(narrOn&&playing)subTimer=setTimeout(showSub,(.15+SUB_LAG)*1000/speed);else showSub();
+  const f=c.t0/total*100;prog.firstElementChild.style.width=f+'%';$('bar').style.width=f+'%';$('time').textContent=`${fmt(c.t0)} / ${fmt(total)}`}
+/* narration audio drives the cues: while it plays, the line whose words are being heard is shown */
+const narr=new Audio(NARR.src);narr.preload='auto';let leadT=null,poll=null;
+/* load the whole file into memory when possible, so jumping to any line can seek even on servers without range requests */
+fetch(NARR.src).then(r=>r.ok?r.blob():null).then(b=>{if(b&&narr.paused)narr.src=URL.createObjectURL(b)}).catch(()=>{});
+const narrIdx=t=>{let i=0;while(i+1<NARR.starts.length&&NARR.starts[i+1]-.15<=t)i++;return i};
+function narrStop(){narr.pause();clearTimeout(leadT);clearInterval(poll);poll=null;music.duck(false)}
+/* voice polish, designed from a measurement of this recording (long-term spectrum): the raw voice is very strong at
+   100–500 Hz but weak above ~4 kHz, which is what makes it sound muffled. The chain clears the low-mid mud and brings
+   up clarity and air, plus a light harmonic exciter that adds real high-frequency detail. Same timbre, no pitch change:
+   rumble cut (110 Hz) -> de-mud (−3 dB @220 Hz) -> de-box (−3.5 dB @420 Hz) -> presence (+4.5 dB @3 kHz, +3 dB @5 kHz)
+   -> brightness/air (+6 dB shelf from 7 kHz) -> gentle compression; in parallel a high-band exciter (harmonics above 6 kHz). */
+let vctx=null,vSrc=null,vChain=null,vPolish=true;
+function voiceChain(){if(vctx){vctx.resume();return}
+  vctx=new (window.AudioContext||window.webkitAudioContext)();vSrc=vctx.createMediaElementSource(narr);
+  const bq=(type,f,gain,Q)=>{const b=vctx.createBiquadFilter();b.type=type;b.frequency.value=f;if(gain!=null)b.gain.value=gain;if(Q)b.Q.value=Q;return b};
+  const hp=bq('highpass',110,null,.7),mud=bq('peaking',220,-3,.9),box=bq('peaking',420,-3.5,1),pres=bq('peaking',3000,4.5,.7),pres2=bq('peaking',5000,3,1),air=bq('highshelf',7000,6);
+  const comp=vctx.createDynamicsCompressor();comp.threshold.value=-26;comp.ratio.value=2.5;comp.knee.value=10;comp.attack.value=.01;comp.release.value=.22;
+  const make=vctx.createGain();make.gain.value=1.4;   // about +5 dB so the voice sits clearly above the music
+  const lim=vctx.createDynamicsCompressor();lim.threshold.value=-2;lim.ratio.value=20;lim.knee.value=0;lim.attack.value=.002;lim.release.value=.1;   // catches peaks so the louder voice never clips
+  // exciter: take the 3 kHz+ band, saturate it to create upper harmonics, keep only what lands above 6 kHz, mix in lightly
+  const xin=bq('highpass',3000,null,.7),xsat=vctx.createWaveShaper(),n=1024,curve=new Float32Array(n);
+  for(let i=0;i<n;i++){const x=i/(n-1)*2-1;curve[i]=Math.tanh(4*x)}xsat.curve=curve;xsat.oversample='4x';
+  const xout=bq('highpass',6000,null,.7),xg=vctx.createGain();xg.gain.value=.12;
+  [hp,mud,box,pres,pres2,air,comp,make,lim].reduce((a,b)=>(a.connect(b),b));lim.connect(vctx.destination);
+  hp.connect(xin);xin.connect(xsat);xsat.connect(xout);xout.connect(xg);xg.connect(comp);
+  vChain=hp;voiceRoute()}
+function voiceRoute(){if(!vSrc)return;vSrc.disconnect();vSrc.connect(vPolish?vChain:vctx.destination)}
+function narrSync(){
+  if(narr.ended||narr.currentTime>=NARR.ends[NARR.ends.length-1]+.4){clearInterval(poll);poll=null;   // voice finished → outro
+    if(pos<flat.length-1)go(flat.length-1);clearTimeout(timer);timer=setTimeout(next,flat[pos].dur*1000/speed);return}
+  const i=narrIdx(narr.currentTime);if(i>pos)go(i);
+  const t=narr.currentTime;music.duck(NARR.starts.some((s0,k)=>t>=s0-.08&&t<=NARR.ends[k]+.12))}
+function schedule(){clearTimeout(timer);const my=++token;if(!playing)return;const c=flat[pos];
+  if(narrOn){narrStop();narr.preservesPitch=true;narr.defaultPlaybackRate=narr.playbackRate=speed;
+    if(pos===flat.length-1){timer=setTimeout(next,c.dur*1000/speed);return}
+    const target=pos===0?0:NARR.starts[pos]-.1;
+    if(narrIdx(narr.currentTime)!==pos||narr.ended)narr.currentTime=Math.max(0,target);
+    voiceChain();
+    const begin=()=>{narr.playbackRate=speed;narr.play().catch(()=>{});poll=setInterval(narrSync,50)};   // play() is cancelled harmlessly if paused right away
+    if(pos===0&&narr.currentTime<.05)leadT=setTimeout(begin,NARR.lead*1000/speed);else begin();
+    return}
+  if(voiceOn&&window.speechSynthesis&&c.text){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(c.text.replace(/HIL/g,'H I L').replace(/SUT/g,'S U T'));
+    u.lang='zh-CN';if(zhVoice)u.voice=zhVoice;u.rate=1.1*speed;u.onend=u.onerror=()=>{if(my===token)timer=setTimeout(next,300)};speechSynthesis.speak(u)}
+  else timer=setTimeout(next,c.dur*1000/speed)}
+function next(){if(pos<flat.length-1){go(pos+1);schedule()}else{setPlaying(false);if(recorder&&recorder.state==='recording')setTimeout(()=>recorder.stop(),1200)}}
+/* starting playback from the very first line (re)renders the opening, so its animation always begins when Play is pressed */
+function setPlaying(v){playing=v;$('bPlay').textContent=v?'❚❚':'▶';if(v){music.start(pos===0);if(pos===0){cur=-1;go(0)}music.cue(pos===flat.length-1,flat[pos].dur/speed);schedule()}else{music.pause();narrStop();clearTimeout(timer);token++;window.speechSynthesis&&speechSynthesis.cancel()}}
+function jump(p){go(p);if(playing)schedule()}
+const sceneStart=si=>flat.findIndex(f=>f.si===si);
+function jumpScene(d){const si=Math.max(0,Math.min(scenes.length-1,flat[pos].si+d));jump(sceneStart(si))}
+
+$('bPlay').onclick=()=>setPlaying(!playing);
+$('bP').onclick=()=>jump(pos-1);$('bN').onclick=()=>jump(pos+1);
+$('bPS').onclick=()=>jumpScene(flat[pos].ci>0?0:-1);$('bNS').onclick=()=>jumpScene(1);
+stage.onclick=()=>setPlaying(!playing);
+prog.onclick=e=>{const r=prog.getBoundingClientRect(),t=(e.clientX-r.left)/r.width*total;let i=flat.findIndex(c=>c.t0+c.dur>t);jump(i<0?flat.length-1:i)};
+$('spd').onchange=e=>{speed=+e.target.value;if(playing)schedule()};
+$('voice').onchange=e=>{voiceOn=e.target.checked;if(playing)schedule()};
+$('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.37:.6);
+  $('time').textContent=`${fmt(flat[pos].t0)} / ${fmt(total)}`;if(playing)schedule()};
+music.setVol(narrOn?.37:.6);
+$('vpol').onchange=e=>{vPolish=e.target.checked;voiceRoute()};
+$('bgm').onchange=e=>music.toggle(e.target.checked);
+$('sfx').onchange=e=>music.toggleFx(e.target.checked);
+const pickVoice=()=>{if(!window.speechSynthesis)return;const vs=speechSynthesis.getVoices();zhVoice=vs.find(v=>/zh[-_]CN/i.test(v.lang)&&/Xiaoxiao|Natural|Online/i.test(v.name))||vs.find(v=>/zh[-_]CN/i.test(v.lang))||null};
+if(window.speechSynthesis){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+const clean=()=>{document.body.classList.toggle('clean');fit()};
+$('bClean').onclick=clean;
+document.addEventListener('mousemove',e=>document.body.classList.toggle('peek',!recorder&&e.clientY>innerHeight-90));
+/* leaving full screen outside a recording always brings the normal page (with controls) back */
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&!recorder){document.body.classList.remove('rec');$('recBox')?.remove();fit()}});
+const full=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+$('bFull').onclick=full;
+addEventListener('keydown',e=>{if(e.target.tagName==='SELECT')return;
+  const k=e.key;if(k===' '){e.preventDefault();setPlaying(!playing)}else if(k==='ArrowRight')jump(pos+1);else if(k==='ArrowLeft')jump(pos-1);
+  else if(k==='ArrowDown'||k==='PageDown'){e.preventDefault();jumpScene(1)}else if(k==='ArrowUp'||k==='PageUp'){e.preventDefault();jumpScene(flat[pos].ci>0?0:-1)}
+  else if(k==='Escape'&&document.body.classList.contains('clean')&&!recorder)clean();
+  else if(k==='h'||k==='H')clean();else if(k==='f'||k==='F')full();else if(k==='v'||k==='V'){$('voice').click()}else if(k==='n'||k==='N'){$('narr').click()}else if(k==='b'||k==='B'){$('vpol').click()}else if(k==='m'||k==='M'){$('bgm').click()}else if(k==='s'||k==='S'){$('sfx').click()}
+  else if(k==='Home')jump(0)});
+/* while recording, show the stage at exactly 1920×1080 device pixels when the screen allows (crisp 1080p capture) */
+function fit(){const w=$('wrap');let s=Math.min(w.clientWidth/1920,w.clientHeight/1080);if(document.body.classList.contains('rec'))s=Math.min(s,1/devicePixelRatio);stage.style.transform=`translate(-50%,-50%) scale(${s})`}
+
+/* ---------- export: record the whole video (picture + narration + music + effects) to a 1080p 16:9 MP4 ----------
+   Uses the browser's own tab capture: step 1 goes full screen, step 2 (a fresh click) asks to share this tab with its
+   audio, crops the capture to the stage, scales it to 1920×1080 at 30 fps, plays the video from the start and saves
+   the file when it ends. Recording runs in real time (≈ the video length). */
+const REC_TYPES=['video/mp4;codecs="avc1.640028,mp4a.40.2"','video/mp4','video/webm;codecs=vp9,opus'];
+let recorder=null;
+function recDialog(){
+  if(recorder)return;
+  const box=document.createElement('div');box.id='recBox';
+  box.innerHTML=`<div class="card"><h3>导出 1080p MP4</h3>
+    <ol><li>点击「开始录制」后，在浏览器弹窗中选择<b>此标签页</b>，并勾选<b>分享标签页音频</b>。</li>
+    <li>视频会从头自动播放并录制（约 ${fmt(total)}），期间请不要切换窗口或操作页面。</li>
+    <li>播放结束后自动保存为 <b>什么是HIL测试_1080p.mp4</b>。</li></ol>
+    <button class="go">开始录制</button><button class="no">取消</button><div class="msg"></div></div>`;
+  document.body.appendChild(box);
+  if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});
+  document.body.classList.add('rec');setTimeout(fit,300);
+  const close=()=>{box.remove();if(!recorder){document.body.classList.remove('rec');fit()}};
+  box.querySelector('.no').onclick=close;
+  box.querySelector('.go').onclick=async()=>{
+    const msg=box.querySelector('.msg');
+    music.warm();if(narrOn)voiceChain();   // unlock music + voice audio now, while this click still counts as a user gesture
+    try{
+      setPlaying(false);
+      const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30,displaySurface:'browser'},audio:{suppressLocalAudioPlayback:false},
+        preferCurrentTab:true,selfBrowserSurface:'include',surfaceSwitching:'exclude',systemAudio:'include'});
+      const [vt]=stream.getVideoTracks();
+      if(!stream.getAudioTracks().length)msg.textContent='提示：未勾选“分享标签页音频”，导出的视频将没有声音。';
+      box.remove();fit();await new Promise(r=>setTimeout(r,400));
+      if(window.CropTarget&&vt.cropTo)await vt.cropTo(await CropTarget.fromElement(stage));
+      await vt.applyConstraints({width:1920,height:1080,frameRate:30}).catch(()=>{});
+      const type=REC_TYPES.find(t=>MediaRecorder.isTypeSupported(t));
+      const chunks=[];recorder=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:12e6,audioBitsPerSecond:192e3,videoKeyFrameIntervalDuration:1000});
+      recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+      recorder.onstop=()=>{stream.getTracks().forEach(t=>t.stop());const ext=type.startsWith('video/mp4')?'mp4':'webm';
+        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(chunks,{type}));a.download=`什么是HIL测试_1080p.${ext}`;a.click();
+        recorder=null;document.body.classList.remove('rec');if(document.fullscreenElement)document.exitFullscreen();fit()};
+      vt.onended=()=>recorder&&recorder.state==='recording'&&(setPlaying(false),recorder.stop());   // sharing stopped by the user
+      pos=0;cur=-1;scn.innerHTML='';subT.textContent='';chap.textContent='';stage.classList.add('white');   // start from a blank white frame, like a fresh load
+      await new Promise(r=>setTimeout(r,500));
+      recorder.start(1000);await new Promise(r=>setTimeout(r,600));
+      setPlaying(true);
+    }catch(e){msg.textContent='未开始录制：'+(e.message||e);recorder=null}
+  };
+}
+$('bRec').onclick=recDialog;
+addEventListener('resize',fit);fit();
+/* on load show a blank white stage (nothing animates yet), so screen recording can be started first; Play / Space then starts the opening */
+stage.classList.add('white');chap.textContent='';$('time').textContent=`0:00 / ${fmt(total)}`;
+</script>
+</body>
+</html>
