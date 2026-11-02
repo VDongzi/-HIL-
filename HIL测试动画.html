@@ -280,6 +280,17 @@ const ecu=(x,y,o={})=>{const s=o.s||1;
   const pins=[-60,-30,0,30,60].map(p=>`<rect x="${p-6}" y="-84" width="12" height="22" rx="3" fill="rgba(95,104,126,.62)"/><rect x="${p-6}" y="62" width="12" height="22" rx="3" fill="rgba(95,104,126,.62)"/>`).join('');
   return g(x,y,`${pins}<rect x="-100" y="-66" width="200" height="132" rx="16" fill="${o.fill||C.dark}"${o.stroke?` stroke="${o.stroke}" stroke-width="6"`:''}/><rect x="-40" y="-40" width="80" height="80" rx="10" fill="#3C4655" stroke="#5F687E" stroke-width="3"/>${T(0,0,o.icon||'ECU',{size:o.icon?44:24,fill:'#fff',w:800})}`,s)
    +(o.label?T(x,y+86*s+32,o.label,{size:o.lz||32,w:700,fill:o.lc||C.dark}):'')+(o.sub?T(x,y+86*s+74,o.sub,{size:26,fill:C.gray}):'')};
+/* AC controller: an automotive ECU — finned aluminium housing, mounting ears, two black harness connectors, label sticker */
+const acCtrl=(x,y,label)=>{
+  const holes=(x0,w,cols)=>[0,1,2].map(r=>Array.from({length:cols},(_,c)=>`<rect x="${x0+12+c*(w-24)/cols+2}" y="${14+r*14}" width="${(w-24)/cols-6}" height="7" rx="2" fill="#5F687E"/>`).join('')).join('');
+  return g(x,y,
+    [[-1,-58],[1,-58],[-1,52],[1,52]].map(([k,cy])=>`<rect x="${k>0?140:-176}" y="${cy-16}" width="36" height="32" rx="8" fill="#E0E2E8" stroke="#5F687E" stroke-width="3"/><circle cx="${k*162}" cy="${cy}" r="7" fill="#fff" stroke="#5F687E" stroke-width="3"/>`).join('')
+   +`<rect x="-150" y="-86" width="300" height="172" rx="14" fill="#E0E2E8" stroke="#5F687E" stroke-width="4"/>`
+   +Array.from({length:14},(_,i)=>`<rect x="${-134+i*20}" y="-74" width="8" height="54" rx="4" fill="#fff"/>`).join('')
+   +`<rect x="28" y="-70" width="100" height="38" rx="4" fill="#fff" stroke="#5F687E" stroke-width="2"/><rect x="28" y="-70" width="100" height="10" rx="3" fill="${C.red}"/>`+T(52,-44,'❄',{size:18,fill:C.blue})+`<rect x="66" y="-49" width="52" height="5" rx="2" fill="#5F687E"/>`
+   +`<rect x="-136" y="-8" width="150" height="80" rx="8" fill="${C.dark}"/><rect x="-82" y="-16" width="42" height="12" rx="4" fill="${C.dark}"/>`+holes(-136,150,6).replace(/y="(\d+)"/g,(m,v)=>`y="${+v-6}"`)
+   +`<rect x="26" y="-8" width="110" height="80" rx="8" fill="${C.dark}"/><rect x="60" y="-16" width="42" height="12" rx="4" fill="${C.dark}"/>`+holes(26,110,4).replace(/y="(\d+)"/g,(m,v)=>`y="${+v-6}"`))
+   +T(x,y+128,label,{size:32,w:700,fill:C.red})};
 /* bare hardware: a circuit board with an unlabeled chip, traces and a few components */
 /* board traces, all starting at the chip and running outward */
 const pcbTraces=()=>[-30,-15,0,15,30].flatMap(p=>[`M${p},-48 V${p%30?-62:-72} H${p*2.6}`,`M${p},48 V${p%30?62:72} H${p*2.6}`])
@@ -444,8 +455,8 @@ const scenes=[
  R(0,'<g id="hilx"></g>','fade')
  /* this page explains only the hardware part; "in the loop" comes later, so only the Hardware box, placed right above the controller */
  +R(1,B(200,170,560,110,{fill:C.redL,stroke:C.red,t:'Hardware → 硬件',tc:C.red}),'left')
- +R(2,ecu(480,500,{icon:'❄',label:'空调控制器',lc:C.red,stroke:C.red}),'pop')
- +R(3,A('M620,500 H1060',{c:'red'})+T(840,465,'控制',{size:30,fill:C.red,w:700}),'draw')
+ +R(2,acCtrl(480,500,'空调控制器'),'pop')
+ +R(3,A('M690,500 H1060',{c:'red'})+T(875,465,'控制',{size:30,fill:C.red,w:700}),'draw')
  +R(3,car(1340,500,{s:1.1})+T(1340,620,'被控对象：车厢热环境',{size:32,w:700}),'up',{d:.4})},
 
 {ch:'01 什么是HIL测试',cues:['想象这样一个场景，在炎热的夏天','驾驶员进入车内，通过空调控制面板设定了一个舒适的温度','控制器收到输入信号后，按照控制逻辑启动制冷系统','使车内温度逐渐下降'],
