@@ -838,14 +838,29 @@ const scenes=[
 },
 
 {ch:'结束',grad:2,cues:['以上就是本期关于 HIL 测试的全部内容','感谢您的观看','如果您有其他感兴趣的话题，欢迎在评论区告诉我们','我们下期再见！'],svg:
- /* three QR codes stay on screen for the whole ending; the comment hint appears below them */
- /* k scales the cards (k=1 was the original 340 px card); cards sit closer together so the QR row, labels and comment hint read as one group */
- [QR0,QR1,QR2].map((src,i)=>{const k=.78,x=960+(i-1)*440,cy=295,cw=340*k/2,qw=284*k/2,bw=22*k;
-   /* QR0 has no logo: add the same red Vector badge as the other two, 5 modules wide (safe for its level-M error correction) */
-   const badge=i?'':`<rect x="${x-bw}" y="${cy-bw}" width="${bw*2}" height="${bw*2}" rx="${8*k}" fill="#F62634" stroke="#fff" stroke-width="2"/><path d="${VCHEV}" fill="#fff" transform="translate(${x-10*k},${cy-13.5*k}) scale(${.104*k}) translate(-1776,0)"/>`;
-   return R(0,`<rect x="${x-cw}" y="${cy-cw}" width="${cw*2}" height="${cw*2}" rx="${30*k}" fill="#fff" class="card"/><image href="${src}" x="${x-qw}" y="${cy-qw}" width="${qw*2}" height="${qw*2}"/>${badge}`
-     +T(x,cy+cw+44,['Vector学习路线图','Vector维克多微信公众号','维克多汽车技术Bilibili官方账号'][i],{size:26,w:700}),'up',{d:.2+i*.25})}).join('')
- +R(2,bubble(630,635)+T(730,635,'欢迎在评论区告诉我们您感兴趣的话题',{a:'start',size:36}),'up')},
+ /* "thank you" end card: big title + "THANKS FOR WATCHING" top-left; along the bottom the learning-path QR (red frame) with its text,
+    a thin divider, then two small QR codes with the website underneath */
+ (()=>{const red='#F62634',X=140;
+   /* white card with a QR code; badge: QR0 has no logo, so add the red Vector badge (5 modules wide, safe for its level-M error correction) */
+   const qr=(src,x,y,s,badge)=>{const k=s/340,q=284*k/2,c=s/2,bw=22*k;
+     return `<rect x="${x-c}" y="${y-c}" width="${s}" height="${s}" rx="${24*k}" fill="#fff"/><image href="${src}" x="${x-q}" y="${y-q}" width="${q*2}" height="${q*2}"/>`
+       +(badge?`<rect x="${x-bw}" y="${y-bw}" width="${bw*2}" height="${bw*2}" rx="${8*k}" fill="${red}" stroke="#fff" stroke-width="2"/><path d="${VCHEV}" fill="#fff" transform="translate(${x-10*k},${y-13.5*k}) scale(${.104*k}) translate(-1776,0)"/>`:'')};
+   const txt=(x,y,s,z,o={})=>`<text${o.tt?' class="tt"':''} x="${x}" y="${y}" font-size="${z}" fill="${o.fill||'#fff'}" font-weight="${o.bold?700:o.tt?500:400}" dominant-baseline="central"${o.op?` opacity="${o.op}"`:''}>${s}</text>`;
+   const link=(x,y,s,z)=>txt(x,y,s,z,{bold:1});
+   const S=250,cy=590,qx=X+S/2,tx=X+S+44,dv=1040,s2=150,c2=545;
+   return R(0,txt(X,150,'感谢观看',140,{tt:1}),'up')
+     +R(0,`<rect x="${X}" y="${290-3}" width="110" height="6" rx="3" fill="#fff"/>`
+       +`<text x="${X+140}" y="290" font-size="38" fill="#fff" font-weight="700" letter-spacing="5" dominant-baseline="central">THANKS FOR WATCHING</text>`,'up',{d:.3})
+     /* learning path: QR card + title, hint and link */
+     +R(0,qr(QR0,qx,cy,S,1)
+       +txt(tx,cy-70,'学习路线图',52,{tt:1})
+       +txt(tx,cy,'扫码或访问网址，查看完整学习路线',26,{op:.9})
+       +link(tx,cy+62,'academy.vectoryun.cn/v-bahn/',32),'up',{d:.6})
+     +R(0,`<rect x="${dv}" y="${cy-S/2}" width="2" height="${S}" fill="rgba(255,255,255,.3)"/>`,'fade',{d:.8})
+     /* NOTE: QR2 is still the Bilibili code; replace it with the learning-centre code before exporting */
+     +R(0,[[QR1,'Vector官方微信公众号'],[QR2,'Vector学习中心']].map(([src,cap],i)=>{const x=dv+180+i*240;
+         return qr(src,x,c2,s2)+`<text x="${x}" y="${c2+s2/2+34}" font-size="22" fill="#fff" font-weight="700" text-anchor="middle" dominant-baseline="central">${cap}</text>`}).join('')
+       +txt(dv+105,c2+s2/2+92,'Vector 官网：',22,{op:.9})+link(dv+250,c2+s2/2+92,'www.vector.com',28),'up',{d:.9})})()},
 {ch:'片尾',white:true,grad:2,lead:3.6,sfx:[[0,.2,'logo'],[0,2.3,'swell']],cues:[''],svg:outro()},
 ];
 
