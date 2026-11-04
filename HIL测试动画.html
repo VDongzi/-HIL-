@@ -839,12 +839,13 @@ const scenes=[
 
 {ch:'结束',grad:2,cues:['以上就是本期关于 HIL 测试的全部内容','感谢您的观看','如果您有其他感兴趣的话题，欢迎在评论区告诉我们','我们下期再见！'],svg:
  /* three QR codes stay on screen for the whole ending; the comment hint appears below them */
- [QR0,QR1,QR2].map((src,i)=>{const x=460+i*500,cy=270;
+ /* k scales the cards (k=1 was the original 340 px card); cards sit closer together so the QR row, labels and comment hint read as one group */
+ [QR0,QR1,QR2].map((src,i)=>{const k=.78,x=960+(i-1)*440,cy=295,cw=340*k/2,qw=284*k/2,bw=22*k;
    /* QR0 has no logo: add the same red Vector badge as the other two, 5 modules wide (safe for its level-M error correction) */
-   const badge=i?'':`<rect x="${x-22}" y="${cy-22}" width="44" height="44" rx="8" fill="#F62634" stroke="#fff" stroke-width="2"/><path d="${VCHEV}" fill="#fff" transform="translate(${x-10},${cy-13.5}) scale(.104) translate(-1776,0)"/>`;
-   return R(0,`<rect x="${x-170}" y="${cy-170}" width="340" height="340" rx="30" fill="#fff" class="card"/><image href="${src}" x="${x-142}" y="${cy-142}" width="284" height="284"/>${badge}`
-     +T(x,cy+215,['Vector学习路线图','Vector维克多微信公众号','维克多汽车技术Bilibili官方账号'][i],{size:28,w:700}),'up',{d:.2+i*.25})}).join('')
- +R(2,bubble(630,665)+T(730,665,'欢迎在评论区告诉我们您感兴趣的话题',{a:'start',size:36}),'up')},
+   const badge=i?'':`<rect x="${x-bw}" y="${cy-bw}" width="${bw*2}" height="${bw*2}" rx="${8*k}" fill="#F62634" stroke="#fff" stroke-width="2"/><path d="${VCHEV}" fill="#fff" transform="translate(${x-10*k},${cy-13.5*k}) scale(${.104*k}) translate(-1776,0)"/>`;
+   return R(0,`<rect x="${x-cw}" y="${cy-cw}" width="${cw*2}" height="${cw*2}" rx="${30*k}" fill="#fff" class="card"/><image href="${src}" x="${x-qw}" y="${cy-qw}" width="${qw*2}" height="${qw*2}"/>${badge}`
+     +T(x,cy+cw+44,['Vector学习路线图','Vector维克多微信公众号','维克多汽车技术Bilibili官方账号'][i],{size:26,w:700}),'up',{d:.2+i*.25})}).join('')
+ +R(2,bubble(630,635)+T(730,635,'欢迎在评论区告诉我们您感兴趣的话题',{a:'start',size:36}),'up')},
 {ch:'片尾',white:true,grad:2,lead:3.6,sfx:[[0,.2,'logo'],[0,2.3,'swell']],cues:[''],svg:outro()},
 ];
 
