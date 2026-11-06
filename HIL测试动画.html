@@ -48,6 +48,14 @@ body.clean.peek #ctl{display:flex;z-index:40}
 @keyframes sceneOut{to{opacity:0;transform:scale(.985)}}
 /* subtitles: white text with a dark outline (stroke painted under the fill), no background box */
 #sub{position:absolute;left:0;right:0;bottom:78px;display:flex;justify-content:center;padding:0 120px}
+/* cold open: highlight montage before the opening — hard-cut flash, red caption tag, earlier lines of a scene shown at once */
+#cflash{position:absolute;inset:0;opacity:0;pointer-events:none;z-index:20}
+#cflash.go{animation:cflash .35s ease-out}
+@keyframes cflash{0%{opacity:.92}100%{opacity:0}}
+#ccap{position:absolute;left:120px;top:140px;z-index:15;background:#F62634;color:#fff;font-family:var(--ft);font-size:46px;font-weight:500;padding:12px 34px;border-radius:8px;opacity:0;transform:translateX(-40px);transition:opacity .25s,transform .4s cubic-bezier(.2,.9,.3,1.2)}
+#ccap.on{opacity:1;transform:none}
+.scene.instant,.scene.instant *{transition:none!important}
+body.cold #hdr{opacity:0!important}
 #sub span{color:#fff;font-size:52px;line-height:1.3;letter-spacing:1px;text-align:center;max-width:1680px;
   -webkit-text-stroke:9px #24262D;paint-order:stroke fill;text-shadow:0 4px 14px rgba(36,38,45,.35)}
 #sub span:empty{display:none}
@@ -185,7 +193,19 @@ svg .bd{font-family:var(--fbb);font-synthesis:none}
 .scene.g text[fill="rgba(246,38,52,.1)"]{fill:rgba(255,255,255,.1)}
 #stage.white{background:#fff}
 #hdr{transition:opacity .6s}
-#stage.dark #hdr,#stage.white #hdr{opacity:0}
+#stage.dark #hdr,#stage.white #hdr,#stage.full #hdr{opacity:0}
+/* full-frame scene: draws over the whole 1920×1080 stage (its SVG content reaches above and below the 800-high scene box) */
+.scene.full svg{overflow:visible}
+/* contents page: the active chapter row grows and turns red in place */
+.tocr .ttl,.tocr .num{transform-box:fill-box;transition:transform .9s cubic-bezier(.22,1,.36,1),fill .7s ease}
+.tocr .ttl{transform-origin:left center}.tocr .num{transform-origin:right center}
+.tocr.act .ttl{transform:scale(1.25);fill:#F62634}
+.tocr.act .num{transform:scale(1.3)}
+/* title page background picture: shown in its final state at once, then a slow, slight zoom while the title is up */
+.bgz .r,.bgz .r *{transition:none!important}
+.bgz{transform-box:view-box;transform-origin:960px 400px}
+.r.on .bgz{animation:bgz 9s linear both}
+@keyframes bgz{from{transform:scale(1)}to{transform:scale(1.08)}}
 .ifade{animation:ifade 1.4s cubic-bezier(.2,.8,.2,1) .35s both;transform-box:fill-box;transform-origin:center}
 @keyframes ifade{from{opacity:0;transform:scale(.55);filter:blur(14px)}}
 .imove{animation:imove 1.5s cubic-bezier(.7,0,.2,1) 1.7s both}
@@ -234,6 +254,8 @@ body.rec,body.rec #stage{cursor:none}
   <div id="scn"></div>
   <div id="sub"><span></span></div>
   <div id="bar"></div>
+  <div id="ccap"></div>
+  <div id="cflash"></div>
 </div></div>
 <div id="ctl">
   <button id="bPS" title="上一场景 (↑ / PgUp)">⏮</button>
@@ -247,6 +269,7 @@ body.rec,body.rec #stage{cursor:none}
   <label title="录制的旁白 (N)"><input type="checkbox" id="narr" checked> 旁白</label>
   <label title="人声美化：更温暖、更有磁性 (B)"><input type="checkbox" id="vpol" checked> 美化</label>
   <label title="使用浏览器语音朗读字幕 (V)"><input type="checkbox" id="voice"> 朗读</label>
+  <label title="开头的高光快剪"><input type="checkbox" id="cold" checked> 片头</label>
   <label title="背景音乐 (M)"><input type="checkbox" id="bgm" checked> 音乐</label>
   <label title="音效 (S)"><input type="checkbox" id="sfx" checked> 音效</label>
   <button id="bClean" title="隐藏控件，便于录屏 (H)">隐藏控件</button>
@@ -413,8 +436,7 @@ function intro(){
       <g class="imove"><path class="ifade" d="${VCHEV}" fill="#fff"/></g>
     </g>
     <text class="tt isub" x="960" y="478" font-size="64" font-weight="500" fill="#24262D" letter-spacing="28" text-anchor="middle" dominant-baseline="central">好奇号</text>
-  </g>`
-  +R(1,`<text class="tt" x="960" y="400" font-size="120" font-weight="500" fill="#24262D" text-anchor="middle" dominant-baseline="central">什么是 <tspan fill="${red}">HIL</tspan> 测试？</text>`,'up',{d:.6});
+  </g>`;   // the topic title page (line 2) is added after the scenes are defined — see titlePage()
 }
 
 /* closing: the Vector logo (centred) fades in like the intro, then slowly zooms in and stays */
@@ -434,9 +456,23 @@ const QR3='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QCMRXhpZgAATU0AKg
 const scenes=[
 {ch:'开场',white:true,grad:2,lead:3,sfx:[[0,.3,'swell'],[0,2.2,'logo']],cues:['大家好，欢迎来到Vector好奇号','本期视频的主题为：什么是HIL测试'],svg:intro()},
 
-{ch:'本期内容',grad:1,cues:['在本期视频中，我们将依次介绍什么是HIL测试','探讨为什么要进行HIL测试','分析HIL测试与黑盒测试之间的区别和联系','并说明HIL测试存在的局限'],svg:
- ['什么是\nHIL测试','为什么要\n进行HIL测试','HIL测试与\n黑盒测试','HIL测试\n存在的局限'].map((t,i)=>{const x=150+i*420;
-  return R(i,B(x,170,360,440,{rx:24})+`<rect x="${x}" y="170" width="360" height="12" rx="6" fill="${C.red}"/>`+T(x+180,280,'0'+(i+1),{size:90,w:800,fill:C.red})+`<line x1="${x+130}" x2="${x+230}" y1="360" y2="360" stroke="${C.line}" stroke-width="4"/>`+T(x+180,470,t,{size:42,w:700}))}).join('')},
+/* contents: full-frame two-panel page (light-grey left with the title, slate right with the 4 chapters);
+   the chapter being introduced turns red and its number grows a little. Drawn in stage coordinates (y −90 … 990). */
+{ch:'本期内容',full:true,cues:['在本期视频中，我们将依次介绍什么是HIL测试','探讨为什么要进行HIL测试','分析HIL测试与黑盒测试之间的区别和联系','并说明HIL测试存在的局限'],svg:(()=>{
+  const red='#F62634',top=-20,rowH=215,x0=720,xr=1800;
+  /* one row per chapter; the one being introduced gets class "act" (see the hook): its title turns red and both title
+     and number grow smoothly in place (CSS .tocr), instead of cross-fading two copies */
+  const row=(t,i)=>{const cy=top+i*rowH+rowH/2;
+    return `<g class="tocr" data-i="${i}"><text class="tt ttl" x="${x0}" y="${cy}" dominant-baseline="central" font-size="64" font-weight="500" fill="#fff">${t}</text>`
+      +`<text class="tt num" x="${xr}" y="${cy+116*.36}" text-anchor="end" font-size="116" font-weight="500" fill="${red}">0${i+1}</text></g>`};
+  return `<rect y="-90" width="620" height="1080" fill="${C.line}"/><rect x="620" y="-90" width="1300" height="1080" fill="${C.gray}"/>`
+   +`<svg x="60" y="-34" width="300" height="39" viewBox="0 0 2000 260">${[...VLOGO,VCHEV].map(d=>`<path d="${d}" fill="${red}" fill-rule="evenodd"/>`).join('')}</svg>`
+   +R(0,`<text class="tt" x="70" y="380" font-size="104" font-weight="500" fill="${C.dark}">本期内容</text>`
+     +`<text class="tt" x="74" y="460" font-size="44" font-weight="500" letter-spacing="3" fill="${red}">CONTENTS</text>`,'left')
+   +R(0,`<line x1="74" x2="370" y1="600" y2="600" stroke="${red}" stroke-width="3"/><path d="M350 584 L372 600 L350 616" fill="none" stroke="${red}" stroke-width="3"/>`,'grow',{d:.4})
+   +[1,2,3].map(i=>R(0,`<line x1="680" x2="1840" y1="${top+i*rowH}" y2="${top+i*rowH}" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>`,'grow',{d:.2+i*.1})).join('')
+   +['什么是HIL测试','为什么要进行HIL测试','HIL测试与黑盒测试','HIL测试的局限'].map((t,i)=>R(0,row(t,i),'right',{d:.2+i*.12})).join('')})(),
+ hook:(ci,root)=>root.querySelectorAll('.tocr').forEach(e=>e.classList.toggle('act',+e.dataset.i===ci))},
 
 {ch:'01 什么是HIL测试',grad:2,cues:['首先，让我们先从一个最基本的问题开始：','什么是HIL测试？'],svg:chapter('01','什么是 HIL 测试？','WHAT IS HIL TESTING')},
 
@@ -868,6 +904,39 @@ const scenes=[
 {ch:'片尾',white:true,grad:2,lead:3.6,sfx:[[0,.2,'logo'],[0,2.3,'swell']],cues:[''],svg:outro()},
 ];
 
+/* Title cards: a scene picture slowly zooms in behind a translucent grey band carrying a red title.
+   The picture is a copy of that scene with its cue attributes renamed (data-b…), so the card's cues don't drive it;
+   the hook shows it in its frozen state once. */
+/* titleCard(scene, at, srcFirstCue, AT, title, quoted): background = copy of the scene whose first cue is srcFirstCue,
+   frozen at its cue AT and slowly zooming; grey band with the red title. quoted → white outline + big red quote marks. */
+function titleCard(s,at,srcCue,AT,title,quoted){
+  const src=scenes.find(x=>x.cues[0]===srcCue),red='#F62634';
+  const pic=src.svg.replace(/data-(at|out|add|sfx)=/g,'data-b$1=');
+  const st=quoted?'stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"':'';
+  /* a bold curly quote mark drawn as shapes (two "9" commas; turned 180° it is the opening mark) */
+  const nine='M-26,0 A26,26 0 1,1 26,0 C26,34 8,58 -18,72 L-24,60 C-8,50 0,40 0,26 A26,26 0 0,1 -26,0 Z';
+  const quote=(x,y,rot)=>`<g transform="translate(${x},${y}) rotate(${rot}) scale(1.1)">${[-34,34].map(dx=>`<path transform="translate(${dx},0)" d="${nine}" fill="${red}" stroke="#fff" stroke-width="5" stroke-linejoin="round" paint-order="stroke"/>`).join('')}</g>`;
+  s.full=true;
+  s.svg+=R(at,`<rect x="-200" y="-200" width="2320" height="1200" fill="#EEF0F4"/><g class="bgz">${pic}</g>`,'f')
+    +R(at,`<rect x="0" y="230" width="1920" height="340" fill="rgba(95,104,126,.85)"/>`,'grow',{d:.15})
+    +R(at,`<text class="tt" x="960" y="400" font-size="130" font-weight="500" fill="${red}" ${st} text-anchor="middle" dominant-baseline="central">${title}</text>`,'up',{d:.5})
+    +(quoted?(()=>{   // quote marks hug the title: estimated width (CJK ≈1em, Latin ≈.6em, space ≈.28em at 130px)
+      const w=[...title].reduce((a,ch)=>a+130*(/[　-鿿＀-￯]/.test(ch)?1:ch===' '?.28:.6),0);
+      return R(at,quote(960-w/2-95,330,180),'pop',{d:.8})+R(at,quote(960+w/2+95,470,0),'pop',{d:.95})})():'');
+  s.hook=(ci,root)=>{if(root._bg)return;root._bg=1;
+    root.querySelectorAll('[data-bat]').forEach(e=>e.classList.toggle('on',+e.dataset.bat<=AT&&!(e.dataset.bout!=null&&AT>=+e.dataset.bout)));
+    root.querySelectorAll('[data-badd]').forEach(e=>{const [k,c]=e.dataset.badd.split(' ');e.classList.toggle(c,+k<=AT)})};
+}
+/* opening line 2: plain red title over the test-system picture */
+titleCard(scenes[0],1,'因此，HIL测试系统需要为控制器供电',5,'什么是 HIL 测试？',false);
+/* chapter openers: quoted, white-outlined title over a picture from that chapter
+   [opener's first cue, background scene's first cue, background cue index, title] */
+[['首先，让我们先从一个最基本的问题开始：','在设计阶段，DYNA4 用于编辑模型和场景',6,'什么是 HIL 测试？'],   // Vector tool chain
+ ['这就是我们接下来要探讨的主题：为什么要进行HIL测试','想象一下，一个项目耗费了数年时间、数亿美元资金',3,'为什么要进行 HIL 测试？'],   // Ariane 5 explosion
+ ['接下来，我们来看一看 HIL 测试与黑盒测试之间的区别和联系','因此HIL 测试不能与黑盒测试画等号',4,'HIL 测试 vs 黑盒测试'],   // HIL ≠ black box
+ ['最后，我们来看一下 HIL 测试存在的局限','现代开发流程强调测试左移',4,'HIL 测试的局限'],   // shift-left curve
+].forEach(([cue,src,at,title])=>{const s=scenes.find(x=>x.cues[0]===cue);s.svg='';delete s.grad;titleCard(s,0,src,at,title,true)});
+
 /* ---------- sound: adaptive tech music + sound effects ----------
    Everything is synthesised live with Web Audio (no audio files).
    Style: modern, minimal, friendly light electronics for an automotive-software explainer: a soft detuned pad with a
@@ -1127,13 +1196,59 @@ const NARR={src:'assets/narration.m4a',lead:1.5,
   ends:[2.62, 6.26, 11.94, 14.98, 19.52, 22.74, 27.54, 29.34, 35.96, 39.6, 46.48, 52.3, 54.42, 59, 64.34, 70.14, 72.68, 78.68, 82.22, 85.56, 89.2, 94.08, 98.38, 101.5, 105.52, 109.08, 111.18, 113.46, 116.74, 121.2, 126, 128.18, 133.04, 138.14, 141.58, 145.08, 151.24, 155.2, 160.72, 164.3, 167.82, 175.78, 180.48, 183.56, 187.76, 190.42, 196.4, 200.56, 207.12, 213.18, 217.36, 222.74, 228.74, 233.54, 240.2, 245.96, 252.3, 255.48, 257.06, 258.72, 263.48, 269.68, 276.66, 283.14, 287.82, 294.76, 299.84, 303.88, 308.2, 312.14, 316.9, 322.38, 328.14, 333.4, 339.7, 345.36, 349.64, 357.72, 362.22, 366.48, 372.02, 378.6, 386.94, 392.42, 397.56, 403.56, 408.14, 413.82, 420.18, 425.32, 429.66, 431.14, 437.36, 442.04, 445.56, 452.04, 459.8, 466.6, 469.74, 475.04, 480.2, 488.08, 493, 497.98, 501.36, 506, 513.02, 518.52, 525, 526.9, 530.92, 538.66, 541.32, 546.36, 551.08, 555.04, 559.7, 563.78, 567.42, 572.2, 575.26, 579.16, 582.96, 588.38, 592.44, 597.48, 602.56, 606.52, 610.3, 616.7, 619.28, 621.28, 624.66, 629.76, 631.28, 636.1, 637.98]};
 let total=0,narrOn=flat.filter(c=>c.text).length===NARR.starts.length;
 const prog=$('prog');
+/* ---------- cold open: a short highlight montage played before the opening, cut from existing scenes + narration ----------
+   It is the first part of the timeline (progress bar + time), so it can be sought to and paused like the rest.
+   v: line whose picture is shown; a: narration lines heard (default v) — a number, or {i,from,text} to start part-way
+   into line i at `from` s of the recording, with a shortened subtitle; step: show each heard line's picture in turn;
+   cap: optional red caption tag; hold: ms a picture-only shot (a:[]) stays; fl: flash colour into the shot (k black / w white); end: the music drops out (cliffhanger) */
+const COLD=[
+  {v:64,a:[{i:64,from:284.36,text:'它刚刚升空，便化作一团火球和浓烟'}],fl:'k'},   // "然而，" cut off
+  {v:69,a:[{i:68,from:306.08,text:'经过近10个月的航行后'},69],step:1,fl:'k'},   // "1999年，" cut off
+  {v:72,a:[72,73,{i:75,from:341.56,text:'在系统投入使用之前，必须进行充分验证'},76],step:1,fl:'k'}];   // "因此，" cut off
+const COLD_RATE=1.2;   // the montage voice runs a little faster than the main video
+let coldOn=true,coldTok=0,coldSkip=false,coldAt=null,coldDur=0;const coldT=[];   // coldAt: shot index while inside the montage
+const coldIn=()=>coldAt!=null;
+const clipFrom=c=>c.from??NARR.starts[c.i??c]-.05,clipLen=c=>(NARR.ends[c.i??c]+.08-clipFrom(c))/COLD_RATE;
+/* expected start time of every shot (for the progress bar) and the montage length */
+function coldTiming(){let acc=0;COLD.forEach((s,k)=>{coldT[k]=acc;const aud=s.a||[s.v];
+  acc+=.25+(aud.length?aud.reduce((a,c)=>a+clipLen(c)+.04,0):s.hold/1000)+(s.end?.8:.15)});coldDur=acc+.3}
+coldTiming();
+const coldWait=(ms,t)=>new Promise((res,rej)=>setTimeout(()=>t===coldTok?res():rej(),ms));
+function coldFlash(k){const f=$('cflash');f.classList.remove('go');f.style.background=k==='w'?'#fff':'#000';void f.offsetWidth;f.classList.add('go')}
+function coldCap(t){const c=$('ccap');c.classList.remove('on');if(t){c.textContent=t;void c.offsetWidth;c.classList.add('on')}}
+function coldProg(t){const f=t/total*100;prog.firstElementChild.style.width=f+'%';$('bar').style.width=f+'%';$('time').textContent=`${fmt(t)} / ${fmt(total)}`}
+/* show line p's picture: on a new scene, everything before p appears at once (no animation, no sounds), then p animates */
+function coldShow(p){const c=flat[p];
+  if(c.si!==cur){render(c.si);chap.textContent='';
+    if(c.ci>0){root.classList.add('instant');const fx=$('sfx').checked;music.toggleFx(false);apply(c.ci-1);music.toggleFx(fx);root.getBoundingClientRect();root.classList.remove('instant')}}
+  apply(c.ci)}
+const shotPic=s=>{const a=s.a||[s.v];return s.step?a[0].i??a[0]:s.v};
+/* enter shot k without playing it (seeking while paused): its first picture + caption */
+function coldPose(k){coldTok++;narrStop();coldAt=k;document.body.classList.add('cold');coldShow(shotPic(COLD[k]));coldCap(COLD[k].cap);subT.textContent='';coldProg(coldT[k])}
+function coldClip(c,t){const i=c.i??c;return new Promise((res,rej)=>{narrStop();narr.preservesPitch=true;narr.playbackRate=COLD_RATE;narr.currentTime=Math.max(0,clipFrom(c));voiceChain();music.duck(true);
+  subT.textContent=c.text||flat[i].text;sub.classList.remove('anim');void sub.offsetWidth;sub.classList.add('anim');narr.play().catch(()=>{});
+  const iv=setInterval(()=>{if(t!==coldTok){clearInterval(iv);rej();return}
+    if(narr.ended||narr.currentTime>=NARR.ends[i]+.08){clearInterval(iv);narr.pause();music.duck(false);res()}},30)})}
+async function coldRun(k0=0){const t=++coldTok;document.body.classList.add('cold');music.start(k0===0);
+  try{for(let k=k0;k<COLD.length;k++){const s=COLD[k],aud=s.a||[s.v];let at=coldT[k]+.25;coldAt=k;coldProg(coldT[k]);
+      coldFlash(s.fl);coldShow(shotPic(s));coldCap(s.cap);if(s.end)music.cue(true,.4);
+      await coldWait(250,t);
+      if(!aud.length){subT.textContent='';await coldWait(s.hold,t)}
+      for(let j=0;j<aud.length;j++){if(s.step&&j){const p=aud[j].i??aud[j];if(flat[p].si!==cur)coldCap('');coldShow(p)}   /* the caption belongs to the shot's first scene */
+        coldProg(at);at+=clipLen(aud[j])+.04;await coldClip(aud[j],t)}
+      await coldWait(s.end?800:150,t);coldCap('')}
+  }catch(e){return}
+  coldLeave();coldFlash('w');pos=0;cur=-1;coldSkip=true;setPlaying(true)}   // hand over to the normal opening
+/* leave the montage (it ended, or the main video was sought to): the next go() renders its scene afresh */
+function coldLeave(){coldTok++;coldAt=null;narrStop();coldCap('');subT.textContent='';document.body.classList.remove('cold');cur=-1}
 function timing(){
   if(narrOn){const N=NARR.starts.length;   // each line starts just before its words are heard; the outro follows the last line
     flat.forEach((c,i)=>{c.t0=i===0?0:i<N?NARR.lead+NARR.starts[i]-.15:NARR.lead+NARR.ends[N-1]+.6});
     flat.forEach((c,i)=>{c.dur=i<flat.length-1?flat[i+1].t0-c.t0:6.2})}
   else{let acc=0;flat.forEach(c=>{c.dur=Math.max(2,.6+wt(c.text)*.24)+(c.ci===0?.6+(scenes[c.si].lead||0):0);c.t0=acc;acc+=c.dur})}
+  const off=coldOn?coldDur:0;flat.forEach(c=>c.t0+=off);   // the cold open comes first on the timeline
   const l=flat[flat.length-1];total=l.t0+l.dur;
-  prog.querySelectorAll('b').forEach(b=>b.remove());let marks='';
+  prog.querySelectorAll('b').forEach(b=>b.remove());let marks=off?'<b style="left:0%"></b>':'';
   scenes.forEach((s,si)=>{const c=flat.find(f=>f.si===si);marks+=`<b style="left:${c.t0/total*100}%"></b>`});prog.insertAdjacentHTML('beforeend',marks)}
 timing();
 
@@ -1146,8 +1261,8 @@ function render(si){cur=si;const s=scenes[si],old=[...scn.querySelectorAll('.sce
   music.melody({'01':0,'02':1,'03':2,'04':3}[cid]??4);   // each chapter has its own melody
   if(old.length&&cid!==render._chap)music.chapter(KEYS_BY_CHAP[cid]??0);if(old.length)music.sfx('trans');render._chap=cid;
   /* soft: the next page continues the same picture — show it at once underneath and only fade the old page out (no zoom/blur) */
-  scn.insertAdjacentHTML('afterbegin',`<div class="scene${s.soft?' soft':''}${s.grad===2?' g':''}"><svg viewBox="0 0 1920 800" xmlns="http://www.w3.org/2000/svg">${s.svg}</svg></div>`);root=scn.firstElementChild;
-  old.forEach(o=>{o.classList.add('out');if(s.soft)o.classList.add('soft');setTimeout(()=>o.remove(),750)});chap.textContent=s.ch;stage.classList.toggle('dark',!!s.dark);stage.classList.toggle('white',!!s.white);stage.classList.toggle('grad',!!s.grad);root.getBoundingClientRect()}
+  scn.insertAdjacentHTML('afterbegin',`<div class="scene${s.soft?' soft':''}${s.grad===2?' g':''}${s.full?' full':''}"><svg viewBox="0 0 1920 800" xmlns="http://www.w3.org/2000/svg">${s.svg}</svg></div>`);root=scn.firstElementChild;
+  old.forEach(o=>{o.classList.add('out');if(s.soft)o.classList.add('soft');setTimeout(()=>o.remove(),750)});chap.textContent=s.ch;stage.classList.toggle('dark',!!s.dark);stage.classList.toggle('white',!!s.white);stage.classList.toggle('grad',!!s.grad);stage.classList.toggle('full',!!s.full);root.getBoundingClientRect()}
 function apply(ci){const s=scenes[cur],shown=[],added=[];
   root.querySelectorAll('[data-at]').forEach(e=>{const out=e.dataset.out,v=ci>=+e.dataset.at&&!(out!=null&&ci>=+out);if(v&&!e.classList.contains('on'))shown.push(e);e.classList.toggle('on',v)});
   root.querySelectorAll('[data-add]').forEach(e=>{const [k,cls]=e.dataset.add.split(' '),v=ci>=+k;if(v&&!e.classList.contains(cls))added.push(e);else if(!v&&e.classList.contains(cls)&&e.dataset.sfx==='car')music.stopLoops();e.classList.toggle(cls,v)});
@@ -1214,8 +1329,15 @@ function schedule(){clearTimeout(timer);const my=++token;if(!playing)return;cons
   else timer=setTimeout(next,c.dur*1000/speed)}
 function next(){if(pos<flat.length-1){go(pos+1);schedule()}else{setPlaying(false);if(recorder&&recorder.state==='recording')setTimeout(()=>recorder.stop(),1200)}}
 /* starting playback from the very first line (re)renders the opening, so its animation always begins when Play is pressed */
-function setPlaying(v){playing=v;$('bPlay').textContent=v?'❚❚':'▶';if(v){music.start(pos===0);if(pos===0){cur=-1;go(0)}music.cue(pos===flat.length-1,flat[pos].dur/speed);schedule()}else{music.pause();narrStop();clearTimeout(timer);token++;window.speechSynthesis&&speechSynthesis.cancel()}}
-function jump(p){go(p);if(playing)schedule()}
+/* Play from a fresh start (blank frame) or from inside the montage runs the montage; pausing inside it keeps the shot */
+function setPlaying(v){
+  if(v&&coldOn&&!coldSkip&&(coldIn()||pos===0&&cur===-1)){playing=true;$('bPlay').textContent='❚❚';coldRun(coldAt??0);return}
+  coldSkip=false;if(!v&&coldIn()){coldTok++;narrStop()}
+  playing=v;$('bPlay').textContent=v?'❚❚':'▶';if(v){music.start(pos===0);if(pos===0){cur=-1;go(0)}music.cue(pos===flat.length-1,flat[pos].dur/speed);schedule()}else{music.pause();narrStop();clearTimeout(timer);token++;window.speechSynthesis&&speechSynthesis.cancel()}}
+function jump(p){if(coldIn())coldLeave();go(p);if(playing)schedule()}
+/* seek into the montage: shot k plays at once if playing, else waits there for Play */
+function coldSeek(k){if(!coldIn()){clearTimeout(timer);token++;narrStop();window.speechSynthesis&&speechSynthesis.cancel()}
+  pos=0;if(playing){coldAt=k;coldRun(k)}else coldPose(k)}
 const sceneStart=si=>flat.findIndex(f=>f.si===si);
 function jumpScene(d){const si=Math.max(0,Math.min(scenes.length-1,flat[pos].si+d));jump(sceneStart(si))}
 
@@ -1223,7 +1345,9 @@ $('bPlay').onclick=()=>setPlaying(!playing);
 $('bP').onclick=()=>jump(pos-1);$('bN').onclick=()=>jump(pos+1);
 $('bPS').onclick=()=>jumpScene(flat[pos].ci>0?0:-1);$('bNS').onclick=()=>jumpScene(1);
 stage.onclick=()=>setPlaying(!playing);
-prog.onclick=e=>{const r=prog.getBoundingClientRect(),t=(e.clientX-r.left)/r.width*total;let i=flat.findIndex(c=>c.t0+c.dur>t);jump(i<0?flat.length-1:i)};
+prog.onclick=e=>{const r=prog.getBoundingClientRect(),t=(e.clientX-r.left)/r.width*total;
+  if(coldOn&&t<coldDur){let k=0;while(k+1<COLD.length&&coldT[k+1]<=t)k++;coldSeek(k);return}
+  let i=flat.findIndex(c=>c.t0+c.dur>t);jump(i<0?flat.length-1:i)};
 $('spd').onchange=e=>{speed=+e.target.value;if(playing)schedule()};
 $('voice').onchange=e=>{voiceOn=e.target.checked;if(playing)schedule()};
 $('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.37:.6);
@@ -1231,6 +1355,9 @@ $('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===
 music.setVol(narrOn?.37:.6);
 $('vpol').onchange=e=>{vPolish=e.target.checked;voiceRoute()};
 $('bgm').onchange=e=>music.toggle(e.target.checked);
+$('cold').onchange=e=>{coldOn=e.target.checked;const inside=coldIn();if(inside)coldLeave();timing();
+  if(inside){pos=0;if(playing){go(0);schedule()}else{scn.innerHTML='';stage.classList.remove('dark','grad','full');stage.classList.add('white')}}
+  $('time').textContent=`${fmt(flat[pos].t0)} / ${fmt(total)}`};
 $('sfx').onchange=e=>music.toggleFx(e.target.checked);
 const pickVoice=()=>{if(!window.speechSynthesis)return;const vs=speechSynthesis.getVoices();zhVoice=vs.find(v=>/zh[-_]CN/i.test(v.lang)&&/Xiaoxiao|Natural|Online/i.test(v.name))||vs.find(v=>/zh[-_]CN/i.test(v.lang))||null};
 if(window.speechSynthesis){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
@@ -1288,7 +1415,7 @@ function recDialog(){
         const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(chunks,{type}));a.download=`什么是HIL测试_1080p.${ext}`;a.click();
         recorder=null;document.body.classList.remove('rec');if(document.fullscreenElement)document.exitFullscreen();fit()};
       vt.onended=()=>recorder&&recorder.state==='recording'&&(setPlaying(false),recorder.stop());   // sharing stopped by the user
-      pos=0;cur=-1;scn.innerHTML='';subT.textContent='';chap.textContent='';stage.classList.add('white');   // start from a blank white frame, like a fresh load
+      if(coldIn())coldLeave();pos=0;cur=-1;scn.innerHTML='';subT.textContent='';chap.textContent='';stage.classList.add('white');   // start from a blank white frame, like a fresh load
       await new Promise(r=>setTimeout(r,500));
       recorder.start(1000);await new Promise(r=>setTimeout(r,600));
       setPlaying(true);
