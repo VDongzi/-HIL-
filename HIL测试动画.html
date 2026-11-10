@@ -56,32 +56,6 @@ body.clean.peek #ctl{display:flex;z-index:40}
 #ccap.on{opacity:1;transform:none}
 .scene.instant,.scene.instant *{transition:none!important}
 body.cold #hdr{opacity:0!important}
-/* cold-open cast (people added to the montage only) */
-.cast,.emo,.cin,.lean{transform-box:fill-box;transform-origin:50% 100%}
-.emo{opacity:0}.emo.go{animation:emoPop .35s var(--d) cubic-bezier(.3,1.6,.5,1) both}
-.emo.bang.go{animation:bang .9s var(--d) both}
-@keyframes emoPop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:none}}
-@keyframes bang{0%{opacity:0;transform:scale(0)}15%{opacity:1;transform:scale(1.25)}30%,75%{opacity:1;transform:none}100%{opacity:0;transform:none}}
-/* sorrow: the frame's edges darken (over the picture, under subtitles and caption) */
-#cvig{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;background:radial-gradient(ellipse 72% 68% at 50% 46%,rgba(36,38,45,0) 42%,rgba(36,38,45,.6) 100%)}
-#cvig.on{opacity:1;transition:opacity 1.8s ease-in-out}
-/* shot 1: launch crew */
-.nb.go{animation:nbHop 3.4s both,hwGrey 1.6s 2.4s both}
-@keyframes nbHop{0%,68%{transform:none}71%{transform:translateY(-24px) rotate(-9deg)}78%{transform:rotate(-5deg)}90%,100%{transform:rotate(5deg) scale(1,.93)}}
-/* shot 2: ground control on Earth */
-.pxb.bad{animation:pxReach 1s cubic-bezier(.3,0,.3,1) both,pxFade 2.4s .5s ease-in-out both}
-@keyframes pxReach{to{transform:translate(18px,8px) rotate(5deg)}}   /* half a step toward Mars along the curve, leaning after the probe */
-@keyframes pxFade{to{filter:grayscale(1) brightness(.92);opacity:.4}}   /* then greys and fades, a lonely figure */
-/* shot 3: Therac-25 (serious) */
-.hw2.bad{animation:hwBack .45s .35s ease-out both,hwGrey 1.6s 1.4s both}
-@keyframes hwBack{50%{transform:translate(22px,-8px)}100%{transform:translateX(45px)}}
-@keyframes hwGrey{to{filter:grayscale(1) brightness(.92)}}
-.hb2.bad{animation:hbShock 3.2s both}
-@keyframes hbShock{0%,20%{transform:none}28%{transform:translateX(-3px)}32%{transform:translateX(3px)}36%{transform:translateX(-3px)}40%{transform:translateX(3px)}44%{transform:translateX(-2px)}48%{transform:none}100%{transform:rotate(-5deg) scale(.97,.94)}}
-.cin{opacity:0;transform:translateX(780px)}
-.cin.go{opacity:1;transform:none;transition:transform .7s cubic-bezier(.2,.9,.3,1.05),opacity .15s}
-.lean.go{animation:lean .9s cubic-bezier(.4,0,.2,1) both}
-@keyframes lean{to{transform:translateX(-26px) rotate(-3deg)}}   /* half a step toward the shield, a slight lean, then still */
 #sub span{color:#fff;font-size:52px;line-height:1.3;letter-spacing:1px;text-align:center;max-width:1680px;
   -webkit-text-stroke:9px #24262D;paint-order:stroke fill;text-shadow:0 4px 14px rgba(36,38,45,.35)}
 #sub span:empty{display:none}
@@ -303,7 +277,6 @@ body.rec,body.rec #stage{cursor:none}
   <div id="amb"><i></i><i></i><i></i></div>
   <div id="hdr"><div id="chap"></div><div id="brand"></div></div>
   <div id="scn"></div>
-  <div id="cvig"></div>
   <div id="sub"><span></span></div>
   <div id="bar"></div>
   <div id="ccap"></div>
@@ -326,7 +299,7 @@ body.rec,body.rec #stage{cursor:none}
   <label title="音效 (S)"><input type="checkbox" id="sfx" checked> 音效</label>
   <button id="bClean" title="隐藏控件，便于录屏 (H)">隐藏控件</button>
   <button id="bFull" title="全屏 (F)">全屏</button>
-  <button id="bRec" class="main" title="录制整片并导出 1080p MP4">导出MP4</button>
+  <button id="bRec" class="main" title="录制整片并导出 MP4（按屏幕最高 1080p / 2K / 4K）">导出MP4</button>
 </div>
 
 <svg width="0" height="0" style="position:absolute"><defs id="defs"></defs></svg>
@@ -1073,7 +1046,7 @@ const music=(()=>{
   /* per-chapter arpeggio figures through the chord tones (4 = top tone an octave up, -1 = rest): 01, 02, 03, 04, intro/ending */
   const SEQS=[[0,2,1,3,-1,2,4,2,0,2,1,3,2,-1,4,1],[0,-1,4,-1,2,-1,4,1,0,-1,4,-1,3,-1,4,2],[0,1,2,3,-1,-1,2,1,0,1,2,3,4,-1,3,-1],[3,2,1,0,-1,1,2,-1,3,2,1,0,4,-1,2,-1],[0,2,1,3,-1,2,4,2,0,2,1,3,2,-1,4,1]];
   const KEYS=[0,-1,-1,1,-1,-1,2,-1,0,-1,-1,1,-1,3,-1,-1];   // electric-piano comping rhythm, everyday mood
-  let mel=4,wantMel=4,duck,muf,mufG,hatP,shkP,bellP,tr=0,wantTr=0,fill=0,padBus,loops=[],ctx,master,fx,delay,seqF,timer=null,step=0,next=0,on=true,fxOn=true,fading=false,mood='intro',want='intro',mbar=0,chord=PROGS.E[0],
+  let mel=4,wantMel=4,duck,hatP,shkP,bellP,tr=0,wantTr=0,fill=0,padBus,loops=[],ctx,master,fx,delay,seqF,timer=null,step=0,next=0,on=true,fxOn=true,fading=false,mood='intro',want='intro',mbar=0,chord=PROGS.E[0],
       energy=0,lift=0;   // lift: bars of emphasis left
   function init(){
     ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -1083,10 +1056,7 @@ const music=(()=>{
     const lim=ctx.createDynamicsCompressor();lim.threshold.value=-3;lim.ratio.value=20;lim.knee.value=0;lim.attack.value=.002;lim.release.value=.1;
     comp.connect(makeup);makeup.connect(lim);lim.connect(ctx.destination);
     /* duck: dips the music while a sentence is being spoken and lets it swell back in the pauses (driven by the narration timing) */
-    duck=ctx.createGain();
-    /* muffle: a lowpass + dip after a real accident, so the music sounds as if behind a wall (cold open) */
-    muf=ctx.createBiquadFilter();muf.type='lowpass';muf.frequency.value=20000;muf.Q.value=.5;mufG=ctx.createGain();
-    duck.connect(muf);muf.connect(mufG);mufG.connect(comp);
+    duck=ctx.createGain();duck.connect(comp);
     master=ctx.createGain();master.gain.value=0;master.connect(duck);
     /* stereo: hats left, shaker right, bell/plucks slightly right, echoes slightly left — the centre stays free for the voice */
     const pan=v=>{const p=ctx.createStereoPanner();p.pan.value=v;p.connect(master);return p};
@@ -1245,7 +1215,6 @@ const music=(()=>{
     toggle(v){on=v;if(!fading)level(on?VOL:0,.4)},
     toggleFx(v){fxOn=v},
     setVol(v){VOL=v;if(!fading)level(on?VOL:0,.5)},
-    muffle(on,sec=1.5){if(!ctx)return;const t=ctx.currentTime;[[muf.frequency,on?450:20000],[mufG.gain,on?.5:1]].forEach(([a,v])=>{a.cancelScheduledValues(t);a.setValueAtTime(a.value,t);a.exponentialRampToValueAtTime(v,t+sec)})},
     duck(on){if(!ctx||on===duck._on)return;duck._on=on;duck.gain.setTargetAtTime(on?.74:1,ctx.currentTime,on?.06:.3)},
     sfx(name,delay=0){if(!ctx||!fxOn||!playing||!FX[name])return;FX[name](ctx.currentTime+.03+delay/speed)}
   };
@@ -1315,34 +1284,10 @@ function coldFlash(k){const f=$('cflash');f.classList.remove('go');f.style.backg
 function coldCap(t){const c=$('ccap');c.classList.remove('on');if(t){c.textContent=t;void c.offsetWidth;c.classList.add('on')}}
 function coldProg(t){const f=t/total*100;prog.firstElementChild.style.width=f+'%';$('bar').style.width=f+'%';$('time').textContent=`${fmt(t)} / ${fmt(total)}`}
 /* show line p's picture: on a new scene, everything before p appears at once (no animation, no sounds), then p animates */
-/* cold-open cast: cartoon people added only to the montage's pictures (the main video stays as it was).
-   CH: image size + opaque bbox, so ch() can stand a figure with its feet at (cx,by) and its body h tall */
-const CH={boss:[644,2000,10,48,582,1940],coffee:[646,2000,20,56,636,1994],heart:[731,2000,72,8,656,1990],hu:[603,1093,146,72,428,1028],newbie:[643,2000,70,72,630,1938],pixel:[907,2000,160,10,738,1986]};
-const chSrc=n=>`assets/chars/${n}.${n==='hu'?'png':'webp'}`;
-Object.keys(CH).forEach(n=>{new Image().src=chSrc(n)});   // preload, so a figure never pops in late on its first shot
-const ch=(n,cx,by,h)=>{const[W,H,x0,y0,x1,y1]=CH[n],s=h/(y1-y0);
-  return `<image href="${chSrc(n)}" x="${(cx-(x0+x1)/2*s).toFixed(1)}" y="${(by-y1*s).toFixed(1)}" width="${(W*s).toFixed(1)}" height="${(H*s).toFixed(1)}"/>`};
-/* emotion marks (no words): a red "!", a sweat drop; emo() shows one at cue `at`, `d` s later */
-const bang=(x,y,t='!')=>`<text x="${x}" y="${y}" font-size="64" font-weight="800" fill="#F62634" stroke="#fff" stroke-width="8" paint-order="stroke" text-anchor="middle" font-family="var(--ft)">${t}</text>`;
-const drop=(x,y)=>`<path d="M${x},${y-18} C${x+13},${y} ${x+11},${y+13} ${x},${y+13} C${x-11},${y+13} ${x-13},${y} ${x},${y-18}Z" fill="${C.blue}" stroke="#fff" stroke-width="3"/>`;
-const emo=(inner,at,d,cls='')=>`<g class="emo ${cls}" data-add="${at} go" style="--d:${d}s">${inner}</g>`;
-/* after a real accident: the frame's edges darken (vignette), the people grey out (CSS) and the music muffles — quiet, no gags */
-const sorrow=(at,d)=>`<g class="vig" data-add="${at} go" data-muffle="${d}"></g>`;   // marker: coldShow starts the vignette (#cvig) + muffle d s after cue `at`
-const CAST=[   // [line whose scene gets the cast, add(svg)]
-  /* a launch crew member at the left edge, watching: still while the rocket climbs, jolted by the boom (2.3 s), then slumped */
-  [64,v=>v.insertAdjacentHTML('beforeend',`<g class="cast nb" data-add="1 go">${ch('newbie',285,640,238)}</g>`+sorrow(1,2.4))],
-  /* ground control standing on Earth: still; at the break-up he takes half a step toward Mars, then slowly greys and fades */
-  [68,v=>v.insertAdjacentHTML('beforeend',`<g class="cast pxb" data-add="2 bad">${ch('pixel',190,529,160)}</g>`+sorrow(2,.3))],
-  /* Therac-25, kept serious: still at first; at the fault she steps back, trembles, sinks and greys out */
-  [72,v=>v.insertAdjacentHTML('beforeend',`<g class="cast hw2" data-add="2 bad"><g class="cast hb2" data-add="2 bad">${ch('heart',1380,640,330)}</g></g>`+sorrow(2,.6))],
-  [75,v=>v.insertAdjacentHTML('beforeend',`<g class="cin" data-add="1 go"><g class="lean" data-add="2 go">${ch('coffee',1285,640,400)}</g></g>`)]];   // slides in by the shield; at "HIL 测试" half a step toward it with a slight lean
-let mufT=0;const unmuffle=()=>{clearTimeout(mufT);$('cvig').classList.remove('on');music.muffle(false,.4)};
 function coldShow(p){const c=flat[p];
-  if(c.si!==cur){unmuffle();render(c.si);chap.textContent='';CAST.forEach(([i,add])=>{if(flat[i].si===c.si)add(root.querySelector('svg'))});
+  if(c.si!==cur){render(c.si);chap.textContent='';
     if(c.ci>0){root.classList.add('instant');const fx=$('sfx').checked;music.toggleFx(false);apply(c.ci-1);music.toggleFx(fx);root.getBoundingClientRect();root.classList.remove('instant')}}
-  apply(c.ci);
-  /* a sorrow marker has just come on: darken the edges and muffle the music */
-  const vg=root.querySelector('.vig.go[data-muffle]');if(vg){const d=+vg.dataset.muffle;delete vg.dataset.muffle;clearTimeout(mufT);mufT=setTimeout(()=>{if(!coldIn())return;$('cvig').classList.add('on');music.muffle(true)},d*1000)}}
+  apply(c.ci)}
 const shotPic=s=>{const a=s.a||[s.v];return s.step?a[0].i??a[0]:s.v};
 /* enter shot k without playing it (seeking while paused): its first picture + caption */
 function coldPose(k){coldTok++;narrStop();coldAt=k;document.body.classList.add('cold');coldShow(shotPic(COLD[k]));coldCap(COLD[k].cap);subT.textContent='';coldProg(coldT[k])}
@@ -1361,7 +1306,7 @@ async function coldRun(k0=0){const t=++coldTok;document.body.classList.add('cold
   }catch(e){return}
   coldLeave();coldFlash('w');pos=0;cur=-1;coldSkip=true;setPlaying(true)}   // hand over to the normal opening
 /* leave the montage (it ended, or the main video was sought to): the next go() renders its scene afresh */
-function coldLeave(){coldTok++;unmuffle();coldAt=null;narrStop();coldCap('');subT.textContent='';document.body.classList.remove('cold');cur=-1}
+function coldLeave(){coldTok++;coldAt=null;narrStop();coldCap('');subT.textContent='';document.body.classList.remove('cold');cur=-1}
 function timing(){
   if(narrOn){const N=NARR.starts.length;   // each line starts just before its words are heard; the outro follows the last line
     flat.forEach((c,i)=>{c.t0=i===0?0:i<N?NARR.lead+NARR.starts[i]-.15:NARR.lead+NARR.ends[N-1]+.6});
@@ -1495,26 +1440,29 @@ addEventListener('keydown',e=>{if(e.target.tagName==='SELECT')return;
   else if(k==='Escape'&&document.body.classList.contains('clean')&&!recorder)clean();
   else if(k==='h'||k==='H')clean();else if(k==='f'||k==='F')full();else if(k==='v'||k==='V'){$('voice').click()}else if(k==='n'||k==='N'){$('narr').click()}else if(k==='b'||k==='B'){$('vpol').click()}else if(k==='m'||k==='M'){$('bgm').click()}else if(k==='s'||k==='S'){$('sfx').click()}
   else if(k==='Home')jump(0)});
-/* while recording, show the stage at exactly 1920×1080 device pixels when the screen allows (crisp 1080p capture) */
-function fit(){const w=$('wrap');let s=Math.min(w.clientWidth/1920,w.clientHeight/1080);if(document.body.classList.contains('rec'))s=Math.min(s,1/devicePixelRatio);stage.style.transform=`translate(-50%,-50%) scale(${s})`}
+/* recording size: the largest standard 16:9 height the screen can show the stage at in real pixels (1080 / 1440 / 2160) */
+const recRes=()=>{const w=$('wrap'),p=Math.min(w.clientWidth/1920,w.clientHeight/1080)*1080*devicePixelRatio;return p>=2159?2160:p>=1439?1440:1080};
+const recName=h=>h===2160?'4K':h===1440?'2K':'1080p';
+function fit(){const w=$('wrap');let s=Math.min(w.clientWidth/1920,w.clientHeight/1080);if(document.body.classList.contains('rec'))s=Math.min(s,recRes()/1080/devicePixelRatio);stage.style.transform=`translate(-50%,-50%) scale(${s})`}
 
-/* ---------- export: record the whole video (picture + narration + music + effects) to a 1080p 16:9 MP4 ----------
+/* ---------- export: record the whole video (picture + narration + music + effects) to a 16:9 MP4 at the largest
+   standard size the screen shows in real pixels: 1080p, 2K (2560×1440) or 4K (3840×2160) ----------
    Uses the browser's own tab capture: step 1 goes full screen, step 2 (a fresh click) asks to share this tab with its
-   audio, crops the capture to the stage, scales it to 1920×1080 at 30 fps, plays the video from the start and saves
+   audio, crops the capture to the stage, sizes it to that resolution at 30 fps, plays the video from the start and saves
    the file when it ends. Recording runs in real time (≈ the video length). */
-const REC_TYPES=['video/mp4;codecs="avc1.640028,mp4a.40.2"','video/mp4','video/webm;codecs=vp9,opus'];
+const REC_TYPES=['video/mp4;codecs="avc1.640033,mp4a.40.2"','video/mp4;codecs="avc1.640028,mp4a.40.2"','video/mp4','video/webm;codecs=vp9,opus'];   // H.264 level 5.1 first (2K/4K)
 let recorder=null;
 function recDialog(){
   if(recorder)return;
   const box=document.createElement('div');box.id='recBox';
-  box.innerHTML=`<div class="card"><h3>导出 1080p MP4</h3>
+  box.innerHTML=`<div class="card"><h3>导出 <span class="res">1080p</span> MP4</h3>
     <ol><li>点击「开始录制」后，在浏览器弹窗中选择<b>此标签页</b>，并勾选<b>分享标签页音频</b>。</li>
     <li>视频会从头自动播放并录制（约 ${fmt(total)}），期间请不要切换窗口或操作页面。</li>
-    <li>播放结束后自动保存为 <b>什么是HIL测试_1080p.mp4</b>。</li></ol>
+    <li>播放结束后自动保存为 <b>什么是HIL测试_<span class="res">1080p</span>.mp4</b>。</li></ol>
     <button class="go">开始录制</button><button class="no">取消</button><div class="msg"></div></div>`;
   document.body.appendChild(box);
   if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});
-  document.body.classList.add('rec');setTimeout(fit,300);
+  document.body.classList.add('rec');setTimeout(()=>{fit();box.querySelectorAll('.res').forEach(e=>e.textContent=recName(recRes()))},400);
   const close=()=>{box.remove();if(!recorder){document.body.classList.remove('rec');fit()}};
   box.querySelector('.no').onclick=close;
   box.querySelector('.go').onclick=async()=>{
@@ -1528,12 +1476,12 @@ function recDialog(){
       if(!stream.getAudioTracks().length)msg.textContent='提示：未勾选“分享标签页音频”，导出的视频将没有声音。';
       box.remove();fit();await new Promise(r=>setTimeout(r,400));
       if(window.CropTarget&&vt.cropTo)await vt.cropTo(await CropTarget.fromElement(stage));
-      await vt.applyConstraints({width:1920,height:1080,frameRate:30}).catch(()=>{});
+      const H=recRes(),W=H*16/9;await vt.applyConstraints({width:W,height:H,frameRate:30}).catch(()=>{});
       const type=REC_TYPES.find(t=>MediaRecorder.isTypeSupported(t));
-      const chunks=[];recorder=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:12e6,audioBitsPerSecond:192e3,videoKeyFrameIntervalDuration:1000});
+      const chunks=[];recorder=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:{1080:12e6,1440:24e6,2160:45e6}[H],audioBitsPerSecond:192e3,videoKeyFrameIntervalDuration:1000});
       recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);
       recorder.onstop=()=>{stream.getTracks().forEach(t=>t.stop());const ext=type.startsWith('video/mp4')?'mp4':'webm';
-        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(chunks,{type}));a.download=`什么是HIL测试_1080p.${ext}`;a.click();
+        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(chunks,{type}));a.download=`什么是HIL测试_${recName(H)}.${ext}`;a.click();
         recorder=null;document.body.classList.remove('rec');if(document.fullscreenElement)document.exitFullscreen();fit()};
       vt.onended=()=>recorder&&recorder.state==='recording'&&(setPlaying(false),recorder.stop());   // sharing stopped by the user
       if(coldIn())coldLeave();pos=0;cur=-1;scn.innerHTML='';subT.textContent='';chap.textContent='';stage.classList.add('white');   // start from a blank white frame, like a fresh load
