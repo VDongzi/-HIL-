@@ -56,6 +56,30 @@ body.clean.peek #ctl{display:flex;z-index:40}
 #ccap.on{opacity:1;transform:none}
 .scene.instant,.scene.instant *{transition:none!important}
 body.cold #hdr{opacity:0!important}
+/* cold-open cast (people added to the montage only) */
+.cast,.emo,.cin,.lean{transform-box:fill-box;transform-origin:50% 100%}
+.emo{opacity:0}.emo.go{animation:emoPop .35s var(--d) cubic-bezier(.3,1.6,.5,1) both}
+.emo.bang.go{animation:bang .9s var(--d) both}
+@keyframes emoPop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:none}}
+@keyframes bang{0%{opacity:0;transform:scale(0)}15%{opacity:1;transform:scale(1.25)}30%,75%{opacity:1;transform:none}100%{opacity:0;transform:none}}
+/* sorrow: the frame's edges darken (over the picture, under subtitles and caption) */
+#cvig{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;background:radial-gradient(ellipse 72% 68% at 50% 46%,rgba(36,38,45,0) 42%,rgba(36,38,45,.6) 100%)}
+#cvig.on{opacity:1;transition:opacity 1.8s ease-in-out}
+/* shot 1: launch crew */
+.nb.go{animation:nbHop 3.4s both,hwGrey 1.6s 2.4s both}
+@keyframes nbHop{0%,68%{transform:none}71%{transform:translateY(-24px) rotate(-9deg)}78%{transform:rotate(-5deg)}90%,100%{transform:rotate(5deg) scale(1,.93)}}
+/* shot 2: ground control on Earth */
+.pxb.bad{animation:pxFade 2.4s .3s ease-in-out both}@keyframes pxFade{to{filter:grayscale(1) brightness(.92);opacity:.4}}   /* still; greys and fades, a lonely figure */
+/* shot 3: Therac-25 (serious) */
+.hw2.bad{animation:hwBack .45s .35s ease-out both,hwGrey 1.6s 1.4s both}
+@keyframes hwBack{50%{transform:translate(22px,-8px)}100%{transform:translateX(45px)}}
+@keyframes hwGrey{to{filter:grayscale(1) brightness(.92)}}
+.hb2.bad{animation:hbShock 3.2s both}
+@keyframes hbShock{0%,20%{transform:none}28%{transform:translateX(-3px)}32%{transform:translateX(3px)}36%{transform:translateX(-3px)}40%{transform:translateX(3px)}44%{transform:translateX(-2px)}48%{transform:none}100%{transform:rotate(-5deg) scale(.97,.94)}}
+.cin{opacity:0;transform:translateX(780px)}
+.cin.go{opacity:1;transform:none;transition:transform .7s cubic-bezier(.2,.9,.3,1.05),opacity .15s}
+.lean.go{animation:lean .9s cubic-bezier(.4,0,.2,1) both}
+@keyframes lean{to{transform:translateX(-26px) rotate(-3deg)}}   /* half a step toward the shield, a slight lean, then still */
 #sub span{color:#fff;font-size:52px;line-height:1.3;letter-spacing:1px;text-align:center;max-width:1680px;
   -webkit-text-stroke:9px #24262D;paint-order:stroke fill;text-shadow:0 4px 14px rgba(36,38,45,.35)}
 #sub span:empty{display:none}
@@ -208,18 +232,23 @@ svg .bd{font-family:var(--fbb);font-synthesis:none}
 @keyframes bgz{from{transform:scale(1)}to{transform:scale(1.08)}}
 /* own chapter-cover picture (measured from the reference clip): hard cut in, a centred push-in to ~2× that brakes to a stop
    by ~2.5 s, radial zoom-blur that is strongest at the cut and clears by ~3 s, colour draining to black-and-white 0.3–2.4 s */
-.r.on .bgz.cvz{animation:cvZoom 2.5s linear both,cvGrey 2.1s cubic-bezier(.4,0,.6,1) .3s both}
-@keyframes cvZoom{0%{transform:scale(1)}12%{transform:scale(1.27)}20%{transform:scale(1.41)}36%{transform:scale(1.69)}
-  48%{transform:scale(1.84)}60%{transform:scale(1.93)}80%{transform:scale(2)}100%{transform:scale(2.04)}}
+   The picture sits in its own HTML layers under the scene's SVG (.cvL, see titleCard), so the browser draws each layer
+   once and the GPU only moves, scales, fades and greys them — redrawing the vector copies through an SVG blur every
+   frame ran at ~4 fps. Everything inside the layers is frozen (no transitions/animations), so nothing forces a redraw. */
+.cvL,.cvZ,.cvB,.cvL div{position:absolute;left:0;top:0;width:1920px;height:800px}
+#scn .cvL svg{position:absolute;left:0;top:0}
+.cvL~svg{position:relative}   /* keep the scene's own SVG (band, title) above the positioned cover layers */
+.cvL svg *{transition:none!important;animation:none!important}
+.cvZ{transform-origin:960px 400px;will-change:transform,filter;animation:cvZoom 2.5s cubic-bezier(.22,.7,.38,1) both,cvGrey 2.1s cubic-bezier(.4,0,.6,1) .3s both}
+@keyframes cvZoom{from{transform:scale(1)}to{transform:scale(2.04)}}
 /* scene-copy covers: the same push-in curve, but only to 1.4× so the recentred picture stays in frame */
-.r.on .bgz.cvz.cvs{animation-name:cvZoomS,cvGrey}
-@keyframes cvZoomS{0%{transform:scale(1)}12%{transform:scale(1.119)}20%{transform:scale(1.176)}36%{transform:scale(1.281)}
-  48%{transform:scale(1.334)}60%{transform:scale(1.364)}80%{transform:scale(1.387)}100%{transform:scale(1.4)}}
+.cvZ.cvs{animation-name:cvZoomS,cvGrey}
+@keyframes cvZoomS{from{transform:scale(1)}to{transform:scale(1.4)}}
 @keyframes cvGrey{from{filter:grayscale(0)}to{filter:grayscale(1)}}
-.cvZb{transform-box:view-box;transform-origin:960px 400px}
-.r.on .cvZb{animation:cvZb 3s cubic-bezier(.25,.5,.45,1) both}
+.cvB{filter:blur(4px)}
+.cvZb{transform-origin:960px 400px;will-change:transform,opacity;animation:cvZb 3s cubic-bezier(.25,.5,.45,1) both}
 @keyframes cvZb{from{transform:scale(var(--k));opacity:var(--o)}to{transform:scale(1);opacity:0}}
-.r.on .cvSh{animation:cvSh 2s cubic-bezier(.3,.4,.5,1) both}
+.cvSh{will-change:opacity;animation:cvSh 2s cubic-bezier(.3,.4,.5,1) both}
 @keyframes cvSh{from{opacity:.25}to{opacity:1}}
 /* chapter-cover title: appears 0.1 s after the cut already at ~60 % and grows to full size by 0.45 s; the quote marks
    grow the same way, pinned at their outer edges */
@@ -272,6 +301,7 @@ body.rec,body.rec #stage{cursor:none}
   <div id="amb"><i></i><i></i><i></i></div>
   <div id="hdr"><div id="chap"></div><div id="brand"></div></div>
   <div id="scn"></div>
+  <div id="cvig"></div>
   <div id="sub"><span></span></div>
   <div id="bar"></div>
   <div id="ccap"></div>
@@ -959,8 +989,13 @@ function plexBg(){
 function titleCard(s,at,srcCue,AT,title,quoted,cover,plex){
   const src=scenes.find(x=>x.cues[0]===srcCue),red='#F62634';  /* own cover: the sharp drawing (faint at first) plus softened copies, each a little larger, that shrink onto it and
      fade — a radial zoom blur that is strongest at the cut and clears as the push-in brakes */
-  const pic=plex?plexBg():cover?cover.bg+`<g class="cvSh">${cover.fg}</g><g filter="url(#cvSoft)">${(cover.copy?[1.5,3,4.5,6,7.5,9,10.5]:[1,2,3,4,5,6,7,8,9,10,11,12]).map(k=>`<g class="cvZb" style="--k:${(1+k*.035).toFixed(3)};--o:${(.5-k*.035).toFixed(3)}">${cover.fg}</g>`).join('')}</g>`
-    :src.svg.replace(/data-(at|out|add|sfx)=/g,'data-b$1=');
+  const pic=plex?plexBg():cover?'':src.svg.replace(/data-(at|out|add|sfx)=/g,'data-b$1='),
+    sv=(inner,a='')=>`<div${a}><svg viewBox="0 0 1920 800" xmlns="http://www.w3.org/2000/svg" overflow="visible">${inner}</svg></div>`;   // animate the div, not the <svg> (an animated <svg> is redrawn every frame)
+  /* own cover: HTML layers under the scene SVG (render() puts s.under first): backdrop, the sharp drawing (faint at
+     first), and softened copies, each a little larger, that shrink onto it and fade */
+  if(cover)s.under=`<div class="cvL"><div class="cvZ${cover.copy?' cvs':''}">`
+    +sv(`<rect x="-200" y="-200" width="2320" height="1200" fill="#EEF0F4"/>${cover.bg}`)+sv(cover.fg,' class="cvSh"')
+    +`<div class="cvB">${(cover.copy?[1.5,3,4.5,6,7.5,9,10.5]:[1,2,3,4,5,6,7,8,9,10,11,12]).map(k=>sv(cover.fg,` class="cvZb" style="--k:${(1+k*.035).toFixed(3)};--o:${(.5-k*.035).toFixed(3)}"`)).join('')}</div></div></div>`;
   const st=quoted?'stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"':'';
   /* a bold curly quote mark drawn as shapes (two "9" commas; turned 180° it is the opening mark) */
   const nine='M-26,0 A26,26 0 1,1 26,0 C26,34 8,58 -18,72 L-24,60 C-8,50 0,40 0,26 A26,26 0 0,1 -26,0 Z';
@@ -968,7 +1003,7 @@ function titleCard(s,at,srcCue,AT,title,quoted,cover,plex){
   s.full=true;if(cover)s.cut=true;   // own cover: hard cut in, no cross-fade
   /* own cover: band there at the cut, title + quotes grow in (tcIn); others: band grows, title rises, quotes pop */
   const grow=(x,y,inner)=>`<g class="tcIn" style="transform-origin:${x}px ${y}px">${inner}</g>`;
-  s.svg+=R(at,`<rect x="-200" y="-200" width="2320" height="1200" fill="#EEF0F4"/><g class="bgz${cover?' cvz':''}${cover&&cover.copy?' cvs':''}">${pic}</g>`,cover?'instant':'f')
+  s.svg+=(cover?'':R(at,`<rect x="-200" y="-200" width="2320" height="1200" fill="#EEF0F4"/><g class="bgz">${pic}</g>`,'f'))
     +(plex?'':R(at,`<rect x="0" y="230" width="1920" height="340" fill="rgba(95,104,126,.85)"/>`,cover?'instant':'grow',{d:cover?0:.15}))
     +(plex  // topic page: big red title with a white outline straight on the network, no band
       ?R(at,`<text class="tt" x="960" y="400" font-size="170" font-weight="500" fill="${C.red}" stroke="#fff" stroke-width="14" stroke-linejoin="round" paint-order="stroke" text-anchor="middle" dominant-baseline="central">${title}</text>`,'up',{d:.5})
@@ -979,6 +1014,7 @@ function titleCard(s,at,srcCue,AT,title,quoted,cover,plex){
       return cover?R(at,grow(xl-66,330,quote(xl,330,180))+grow(xr+66,470,quote(xr,470,0)),'instant')   // pinned at outer edges
         :R(at,quote(xl,330,180),'pop',{d:.8})+R(at,quote(xr,470,0),'pop',{d:.95})})():'');
   s.hook=(ci,root)=>{if(root._bg)return;root._bg=1;
+    root.querySelectorAll('.cvL svg').forEach(v=>v.pauseAnimations());   // frozen picture: stop SMIL too, or the layers redraw every frame
     root.querySelectorAll('[data-bat]').forEach(e=>e.classList.toggle('on',+e.dataset.bat<=AT&&!(e.dataset.bout!=null&&AT>=+e.dataset.bout)));
     root.querySelectorAll('[data-badd]').forEach(e=>{const [k,c]=e.dataset.badd.split(' ');e.classList.toggle(c,+k<=AT)})};
 }
@@ -1035,7 +1071,7 @@ const music=(()=>{
   /* per-chapter arpeggio figures through the chord tones (4 = top tone an octave up, -1 = rest): 01, 02, 03, 04, intro/ending */
   const SEQS=[[0,2,1,3,-1,2,4,2,0,2,1,3,2,-1,4,1],[0,-1,4,-1,2,-1,4,1,0,-1,4,-1,3,-1,4,2],[0,1,2,3,-1,-1,2,1,0,1,2,3,4,-1,3,-1],[3,2,1,0,-1,1,2,-1,3,2,1,0,4,-1,2,-1],[0,2,1,3,-1,2,4,2,0,2,1,3,2,-1,4,1]];
   const KEYS=[0,-1,-1,1,-1,-1,2,-1,0,-1,-1,1,-1,3,-1,-1];   // electric-piano comping rhythm, everyday mood
-  let mel=4,wantMel=4,duck,hatP,shkP,bellP,tr=0,wantTr=0,fill=0,padBus,loops=[],ctx,master,fx,delay,seqF,timer=null,step=0,next=0,on=true,fxOn=true,fading=false,mood='intro',want='intro',mbar=0,chord=PROGS.E[0],
+  let mel=4,wantMel=4,duck,muf,mufG,hatP,shkP,bellP,tr=0,wantTr=0,fill=0,padBus,loops=[],ctx,master,fx,delay,seqF,timer=null,step=0,next=0,on=true,fxOn=true,fading=false,mood='intro',want='intro',mbar=0,chord=PROGS.E[0],
       energy=0,lift=0;   // lift: bars of emphasis left
   function init(){
     ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -1045,7 +1081,10 @@ const music=(()=>{
     const lim=ctx.createDynamicsCompressor();lim.threshold.value=-3;lim.ratio.value=20;lim.knee.value=0;lim.attack.value=.002;lim.release.value=.1;
     comp.connect(makeup);makeup.connect(lim);lim.connect(ctx.destination);
     /* duck: dips the music while a sentence is being spoken and lets it swell back in the pauses (driven by the narration timing) */
-    duck=ctx.createGain();duck.connect(comp);
+    duck=ctx.createGain();
+    /* muffle: a lowpass + dip after a real accident, so the music sounds as if behind a wall (cold open) */
+    muf=ctx.createBiquadFilter();muf.type='lowpass';muf.frequency.value=20000;muf.Q.value=.5;mufG=ctx.createGain();
+    duck.connect(muf);muf.connect(mufG);mufG.connect(comp);
     master=ctx.createGain();master.gain.value=0;master.connect(duck);
     /* stereo: hats left, shaker right, bell/plucks slightly right, echoes slightly left — the centre stays free for the voice */
     const pan=v=>{const p=ctx.createStereoPanner();p.pan.value=v;p.connect(master);return p};
@@ -1204,6 +1243,7 @@ const music=(()=>{
     toggle(v){on=v;if(!fading)level(on?VOL:0,.4)},
     toggleFx(v){fxOn=v},
     setVol(v){VOL=v;if(!fading)level(on?VOL:0,.5)},
+    muffle(on,sec=1.5){if(!ctx)return;const t=ctx.currentTime;[[muf.frequency,on?450:20000],[mufG.gain,on?.5:1]].forEach(([a,v])=>{a.cancelScheduledValues(t);a.setValueAtTime(a.value,t);a.exponentialRampToValueAtTime(v,t+sec)})},
     duck(on){if(!ctx||on===duck._on)return;duck._on=on;duck.gain.setTargetAtTime(on?.74:1,ctx.currentTime,on?.06:.3)},
     sfx(name,delay=0){if(!ctx||!fxOn||!playing||!FX[name])return;FX[name](ctx.currentTime+.03+delay/speed)}
   };
@@ -1273,10 +1313,34 @@ function coldFlash(k){const f=$('cflash');f.classList.remove('go');f.style.backg
 function coldCap(t){const c=$('ccap');c.classList.remove('on');if(t){c.textContent=t;void c.offsetWidth;c.classList.add('on')}}
 function coldProg(t){const f=t/total*100;prog.firstElementChild.style.width=f+'%';$('bar').style.width=f+'%';$('time').textContent=`${fmt(t)} / ${fmt(total)}`}
 /* show line p's picture: on a new scene, everything before p appears at once (no animation, no sounds), then p animates */
+/* cold-open cast: cartoon people added only to the montage's pictures (the main video stays as it was).
+   CH: image size + opaque bbox, so ch() can stand a figure with its feet at (cx,by) and its body h tall */
+const CH={boss:[644,2000,10,48,582,1940],coffee:[646,2000,20,56,636,1994],heart:[731,2000,72,8,656,1990],hu:[603,1093,146,72,428,1028],newbie:[643,2000,70,72,630,1938],pixel:[907,2000,160,10,738,1986]};
+const chSrc=n=>`assets/chars/${n}.${n==='hu'?'png':'webp'}`;
+Object.keys(CH).forEach(n=>{new Image().src=chSrc(n)});   // preload, so a figure never pops in late on its first shot
+const ch=(n,cx,by,h)=>{const[W,H,x0,y0,x1,y1]=CH[n],s=h/(y1-y0);
+  return `<image href="${chSrc(n)}" x="${(cx-(x0+x1)/2*s).toFixed(1)}" y="${(by-y1*s).toFixed(1)}" width="${(W*s).toFixed(1)}" height="${(H*s).toFixed(1)}"/>`};
+/* emotion marks (no words): a red "!", a sweat drop; emo() shows one at cue `at`, `d` s later */
+const bang=(x,y,t='!')=>`<text x="${x}" y="${y}" font-size="64" font-weight="800" fill="#F62634" stroke="#fff" stroke-width="8" paint-order="stroke" text-anchor="middle" font-family="var(--ft)">${t}</text>`;
+const drop=(x,y)=>`<path d="M${x},${y-18} C${x+13},${y} ${x+11},${y+13} ${x},${y+13} C${x-11},${y+13} ${x-13},${y} ${x},${y-18}Z" fill="${C.blue}" stroke="#fff" stroke-width="3"/>`;
+const emo=(inner,at,d,cls='')=>`<g class="emo ${cls}" data-add="${at} go" style="--d:${d}s">${inner}</g>`;
+/* after a real accident: the frame's edges darken (vignette), the people grey out (CSS) and the music muffles — quiet, no gags */
+const sorrow=(at,d)=>`<g class="vig" data-add="${at} go" data-muffle="${d}"></g>`;   // marker: coldShow starts the vignette (#cvig) + muffle d s after cue `at`
+const CAST=[   // [line whose scene gets the cast, add(svg)]
+  /* a launch crew member at the left edge, watching: still while the rocket climbs, jolted by the boom (2.3 s), then slumped */
+  [64,v=>v.insertAdjacentHTML('beforeend',`<g class="cast nb" data-add="1 go">${ch('newbie',285,640,238)}</g>`+sorrow(1,2.4))],
+  /* ground control standing on Earth: still; at the break-up he slowly greys and fades */
+  [68,v=>v.insertAdjacentHTML('beforeend',`<g class="cast pxb" data-add="2 bad">${ch('pixel',190,529,160)}</g>`+sorrow(2,.3))],
+  /* Therac-25, kept serious: still at first; at the fault she steps back, trembles, sinks and greys out */
+  [72,v=>v.insertAdjacentHTML('beforeend',`<g class="cast hw2" data-add="2 bad"><g class="cast hb2" data-add="2 bad">${ch('heart',1380,640,330)}</g></g>`+sorrow(2,.6))],
+  [75,v=>v.insertAdjacentHTML('beforeend',`<g class="cin" data-add="1 go"><g class="lean" data-add="2 go">${ch('coffee',1285,640,400)}</g></g>`)]];   // slides in by the shield; at "HIL 测试" half a step toward it with a slight lean
+let mufT=0;const unmuffle=()=>{clearTimeout(mufT);$('cvig').classList.remove('on');music.muffle(false,.4)};
 function coldShow(p){const c=flat[p];
-  if(c.si!==cur){render(c.si);chap.textContent='';
+  if(c.si!==cur){unmuffle();render(c.si);chap.textContent='';CAST.forEach(([i,add])=>{if(flat[i].si===c.si)add(root.querySelector('svg'))});
     if(c.ci>0){root.classList.add('instant');const fx=$('sfx').checked;music.toggleFx(false);apply(c.ci-1);music.toggleFx(fx);root.getBoundingClientRect();root.classList.remove('instant')}}
-  apply(c.ci)}
+  apply(c.ci);
+  /* a sorrow marker has just come on: darken the edges and muffle the music */
+  const vg=root.querySelector('.vig.go[data-muffle]');if(vg){const d=+vg.dataset.muffle;delete vg.dataset.muffle;clearTimeout(mufT);mufT=setTimeout(()=>{if(!coldIn())return;$('cvig').classList.add('on');music.muffle(true)},d*1000)}}
 const shotPic=s=>{const a=s.a||[s.v];return s.step?a[0].i??a[0]:s.v};
 /* enter shot k without playing it (seeking while paused): its first picture + caption */
 function coldPose(k){coldTok++;narrStop();coldAt=k;document.body.classList.add('cold');coldShow(shotPic(COLD[k]));coldCap(COLD[k].cap);subT.textContent='';coldProg(coldT[k])}
@@ -1295,7 +1359,7 @@ async function coldRun(k0=0){const t=++coldTok;document.body.classList.add('cold
   }catch(e){return}
   coldLeave();coldFlash('w');pos=0;cur=-1;coldSkip=true;setPlaying(true)}   // hand over to the normal opening
 /* leave the montage (it ended, or the main video was sought to): the next go() renders its scene afresh */
-function coldLeave(){coldTok++;coldAt=null;narrStop();coldCap('');subT.textContent='';document.body.classList.remove('cold');cur=-1}
+function coldLeave(){coldTok++;unmuffle();coldAt=null;narrStop();coldCap('');subT.textContent='';document.body.classList.remove('cold');cur=-1}
 function timing(){
   if(narrOn){const N=NARR.starts.length;   // each line starts just before its words are heard; the outro follows the last line
     flat.forEach((c,i)=>{c.t0=i===0?0:i<N?NARR.lead+NARR.starts[i]-.15:NARR.lead+NARR.ends[N-1]+.6});
@@ -1316,7 +1380,7 @@ function render(si){cur=si;const s=scenes[si],old=[...scn.querySelectorAll('.sce
   music.melody({'01':0,'02':1,'03':2,'04':3}[cid]??4);   // each chapter has its own melody
   if(old.length&&cid!==render._chap)music.chapter(KEYS_BY_CHAP[cid]??0);if(old.length)music.sfx('trans');render._chap=cid;
   /* soft: the next page continues the same picture — show it at once underneath and only fade the old page out (no zoom/blur) */
-  scn.insertAdjacentHTML('afterbegin',`<div class="scene${s.soft||s.cut?' soft':''}${s.grad===2?' g':''}${s.full?' full':''}"><svg viewBox="0 0 1920 800" xmlns="http://www.w3.org/2000/svg">${s.svg}</svg></div>`);root=scn.firstElementChild;
+  scn.insertAdjacentHTML('afterbegin',`<div class="scene${s.soft||s.cut?' soft':''}${s.grad===2?' g':''}${s.full?' full':''}">${s.under||''}<svg viewBox="0 0 1920 800" xmlns="http://www.w3.org/2000/svg">${s.svg}</svg></div>`);root=scn.firstElementChild;
   old.forEach(o=>{if(s.cut){o.remove();return}o.classList.add('out');if(s.soft)o.classList.add('soft');setTimeout(()=>o.remove(),750)});/* cut: old page gone at once */chap.textContent=s.ch;stage.classList.toggle('dark',!!s.dark);stage.classList.toggle('white',!!s.white);stage.classList.toggle('grad',!!s.grad);stage.classList.toggle('full',!!s.full);root.getBoundingClientRect()}
 function apply(ci){const s=scenes[cur],shown=[],added=[];
   root.querySelectorAll('[data-at]').forEach(e=>{const out=e.dataset.out,v=ci>=+e.dataset.at&&!(out!=null&&ci>=+out);if(v&&!e.classList.contains('on'))shown.push(e);e.classList.toggle('on',v)});
