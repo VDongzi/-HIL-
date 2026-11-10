@@ -206,6 +206,26 @@ svg .bd{font-family:var(--fbb);font-synthesis:none}
 .bgz{transform-box:view-box;transform-origin:960px 400px}
 .r.on .bgz{animation:bgz 9s linear both}
 @keyframes bgz{from{transform:scale(1)}to{transform:scale(1.08)}}
+/* own chapter-cover picture (measured from the reference clip): hard cut in, a centred push-in to ~2× that brakes to a stop
+   by ~2.5 s, radial zoom-blur that is strongest at the cut and clears by ~3 s, colour draining to black-and-white 0.3–2.4 s */
+.r.on .bgz.cvz{animation:cvZoom 2.5s linear both,cvGrey 2.1s cubic-bezier(.4,0,.6,1) .3s both}
+@keyframes cvZoom{0%{transform:scale(1)}12%{transform:scale(1.27)}20%{transform:scale(1.41)}36%{transform:scale(1.69)}
+  48%{transform:scale(1.84)}60%{transform:scale(1.93)}80%{transform:scale(2)}100%{transform:scale(2.04)}}
+/* scene-copy covers: the same push-in curve, but only to 1.4× so the recentred picture stays in frame */
+.r.on .bgz.cvz.cvs{animation-name:cvZoomS,cvGrey}
+@keyframes cvZoomS{0%{transform:scale(1)}12%{transform:scale(1.119)}20%{transform:scale(1.176)}36%{transform:scale(1.281)}
+  48%{transform:scale(1.334)}60%{transform:scale(1.364)}80%{transform:scale(1.387)}100%{transform:scale(1.4)}}
+@keyframes cvGrey{from{filter:grayscale(0)}to{filter:grayscale(1)}}
+.cvZb{transform-box:view-box;transform-origin:960px 400px}
+.r.on .cvZb{animation:cvZb 3s cubic-bezier(.25,.5,.45,1) both}
+@keyframes cvZb{from{transform:scale(var(--k));opacity:var(--o)}to{transform:scale(1);opacity:0}}
+.r.on .cvSh{animation:cvSh 2s cubic-bezier(.3,.4,.5,1) both}
+@keyframes cvSh{from{opacity:.25}to{opacity:1}}
+/* chapter-cover title: appears 0.1 s after the cut already at ~60 % and grows to full size by 0.45 s; the quote marks
+   grow the same way, pinned at their outer edges */
+.tcIn{transform-box:view-box}
+.r.on .tcIn{animation:tcIn .45s linear both}
+@keyframes tcIn{0%,21%{opacity:0;transform:scale(.59)}22%{opacity:1;transform:scale(.59)}67%{transform:scale(.88)}100%{opacity:1;transform:scale(1)}}
 .ifade{animation:ifade 1.4s cubic-bezier(.2,.8,.2,1) .35s both;transform-box:fill-box;transform-origin:center}
 @keyframes ifade{from{opacity:0;transform:scale(.55);filter:blur(14px)}}
 .imove{animation:imove 1.5s cubic-bezier(.7,0,.2,1) 1.7s both}
@@ -909,33 +929,68 @@ const scenes=[
    the hook shows it in its frozen state once. */
 /* titleCard(scene, at, srcFirstCue, AT, title, quoted): background = copy of the scene whose first cue is srcFirstCue,
    frozen at its cue AT and slowly zooming; grey band with the red title. quoted → white outline + big red quote marks. */
-function titleCard(s,at,srcCue,AT,title,quoted){
-  const src=scenes.find(x=>x.cues[0]===srcCue),red='#F62634';
-  const pic=src.svg.replace(/data-(at|out|add|sfx)=/g,'data-b$1=');
+/* Chapter-cover pictures. Backdrop with the soft blur used by the zoom-blur copies; boxCover is the chapter-3 picture:
+   a quiet, text-free line drawing (dark "black box" beside an open box with a chip, inputs and outputs), kept near the
+   frame centre since the push-in ends at ~2×. Chapters 1, 2 and 4 use a frozen frame of a scene instead (coverCopy). */
+const coverBg=`<defs><filter id="cvSoft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="4"/></filter></defs>`;
+function boxCover(){
+  const W='#fff',G=C.gray,L=C.line,sk=`stroke="${G}" stroke-width="4" stroke-linejoin="round"`,
+    lin=(x1,y1,x2,y2,c=L,w=4,x='')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" ${x}/>`,
+    cube=(x,y,front,top,side)=>`<path d="M${x},${y} L${x+50},${y-50} L${x+250},${y-50} L${x+200},${y} Z" fill="${top}" ${sk}/>
+      <path d="M${x+200},${y} L${x+250},${y-50} L${x+250},${y+150} L${x+200},${y+200} Z" fill="${side}" ${sk}/>
+      <rect x="${x}" y="${y}" width="200" height="200" fill="${front}" ${sk}/>`,arr='marker-end="url(#ah-gray)"';
+  return {bg:coverBg+`<rect x="-200" y="-200" width="2320" height="1400" fill="#F8F9FA"/>`,
+    fg:lin(250,700,1670,700)+lin(470,440,585,440,G,4,arr)+lin(865,440,975,440,G,4,arr)+lin(1005,440,1115,440,G,4,arr)+lin(1395,440,1500,440,G,4,arr)
+      +cube(600,340,C.dark,G,C.dark)+cube(1120,340,W,W,W)
+      +`<rect x="1180" y="400" width="80" height="80" rx="8" fill="${W}" stroke="${C.blue}" stroke-width="4"/>
+      ${[0,1,2].map(i=>lin(1196+i*24,386,1196+i*24,400,C.blue,4)+lin(1196+i*24,480,1196+i*24,494,C.blue,4)).join('')}
+      ${lin(1140,440,1180,440,C.green,4)}${lin(1260,440,1300,440,C.green,4)}<circle cx="1220" cy="440" r="7" fill="${C.green}"/>`};
+}
+/* a frozen copy of the scene whose first cue is srcCue (cue attributes renamed so they don't drive it; titleCard's hook
+   shows it at cue AT), recentred: its content centre (cx,cy) moved to the zoom centre and scaled by f; strip: exact markup
+   snippets (labels) to drop */
+const coverCopy=(srcCue,cx,cy,f,strip=[])=>({copy:true,bg:coverBg,
+  fg:`<g transform="translate(960,400) scale(${f}) translate(${-cx},${-cy})">${strip.reduce((s,t)=>s.split(t).join(''),
+    scenes.find(x=>x.cues[0]===srcCue).svg.replace(/data-(at|out|add|sfx)=/g,'data-b$1='))}</g>`});
+/* Topic-page backdrop: the supplied network photo (assets/topic-bg.jpg), unaltered, filling the whole 1920×1080 frame */
+function plexBg(){
+  return `<image href="assets/topic-bg.jpg" x="-30" y="-120" width="1980" height="1114" preserveAspectRatio="xMidYMid slice"/>`;
+}
+function titleCard(s,at,srcCue,AT,title,quoted,cover,plex){
+  const src=scenes.find(x=>x.cues[0]===srcCue),red='#F62634';  /* own cover: the sharp drawing (faint at first) plus softened copies, each a little larger, that shrink onto it and
+     fade — a radial zoom blur that is strongest at the cut and clears as the push-in brakes */
+  const pic=plex?plexBg():cover?cover.bg+`<g class="cvSh">${cover.fg}</g><g filter="url(#cvSoft)">${(cover.copy?[1.5,3,4.5,6,7.5,9,10.5]:[1,2,3,4,5,6,7,8,9,10,11,12]).map(k=>`<g class="cvZb" style="--k:${(1+k*.035).toFixed(3)};--o:${(.5-k*.035).toFixed(3)}">${cover.fg}</g>`).join('')}</g>`
+    :src.svg.replace(/data-(at|out|add|sfx)=/g,'data-b$1=');
   const st=quoted?'stroke="#fff" stroke-width="8" stroke-linejoin="round" paint-order="stroke"':'';
   /* a bold curly quote mark drawn as shapes (two "9" commas; turned 180° it is the opening mark) */
   const nine='M-26,0 A26,26 0 1,1 26,0 C26,34 8,58 -18,72 L-24,60 C-8,50 0,40 0,26 A26,26 0 0,1 -26,0 Z';
   const quote=(x,y,rot)=>`<g transform="translate(${x},${y}) rotate(${rot}) scale(1.1)">${[-34,34].map(dx=>`<path transform="translate(${dx},0)" d="${nine}" fill="${red}" stroke="#fff" stroke-width="5" stroke-linejoin="round" paint-order="stroke"/>`).join('')}</g>`;
-  s.full=true;
-  s.svg+=R(at,`<rect x="-200" y="-200" width="2320" height="1200" fill="#EEF0F4"/><g class="bgz">${pic}</g>`,'f')
-    +R(at,`<rect x="0" y="230" width="1920" height="340" fill="rgba(95,104,126,.85)"/>`,'grow',{d:.15})
-    +R(at,`<text class="tt" x="960" y="400" font-size="130" font-weight="500" fill="${red}" ${st} text-anchor="middle" dominant-baseline="central">${title}</text>`,'up',{d:.5})
+  s.full=true;if(cover)s.cut=true;   // own cover: hard cut in, no cross-fade
+  /* own cover: band there at the cut, title + quotes grow in (tcIn); others: band grows, title rises, quotes pop */
+  const grow=(x,y,inner)=>`<g class="tcIn" style="transform-origin:${x}px ${y}px">${inner}</g>`;
+  s.svg+=R(at,`<rect x="-200" y="-200" width="2320" height="1200" fill="#EEF0F4"/><g class="bgz${cover?' cvz':''}${cover&&cover.copy?' cvs':''}">${pic}</g>`,cover?'instant':'f')
+    +(plex?'':R(at,`<rect x="0" y="230" width="1920" height="340" fill="rgba(95,104,126,.85)"/>`,cover?'instant':'grow',{d:cover?0:.15}))
+    +(plex  // topic page: big red title with a white outline straight on the network, no band
+      ?R(at,`<text class="tt" x="960" y="400" font-size="170" font-weight="500" fill="${C.red}" stroke="#fff" stroke-width="14" stroke-linejoin="round" paint-order="stroke" text-anchor="middle" dominant-baseline="central">${title}</text>`,'up',{d:.5})
+      :cover?R(at,grow(960,400,`<text class="tt" x="960" y="400" font-size="130" font-weight="500" fill="${red}" ${st} text-anchor="middle" dominant-baseline="central">${title}</text>`),'instant')
+      :R(at,`<text class="tt" x="960" y="400" font-size="130" font-weight="500" fill="${quoted?red:'#fff'}" ${st} text-anchor="middle" dominant-baseline="central">${title}</text>`,'up',{d:.5}))
     +(quoted?(()=>{   // quote marks hug the title: estimated width (CJK ≈1em, Latin ≈.6em, space ≈.28em at 130px)
-      const w=[...title].reduce((a,ch)=>a+130*(/[　-鿿＀-￯]/.test(ch)?1:ch===' '?.28:.6),0);
-      return R(at,quote(960-w/2-95,330,180),'pop',{d:.8})+R(at,quote(960+w/2+95,470,0),'pop',{d:.95})})():'');
+      const w=[...title].reduce((a,ch)=>a+130*(/[　-鿿＀-￯]/.test(ch)?1:ch===' '?.28:.6),0),xl=960-w/2-95,xr=960+w/2+95;
+      return cover?R(at,grow(xl-66,330,quote(xl,330,180))+grow(xr+66,470,quote(xr,470,0)),'instant')   // pinned at outer edges
+        :R(at,quote(xl,330,180),'pop',{d:.8})+R(at,quote(xr,470,0),'pop',{d:.95})})():'');
   s.hook=(ci,root)=>{if(root._bg)return;root._bg=1;
     root.querySelectorAll('[data-bat]').forEach(e=>e.classList.toggle('on',+e.dataset.bat<=AT&&!(e.dataset.bout!=null&&AT>=+e.dataset.bout)));
     root.querySelectorAll('[data-badd]').forEach(e=>{const [k,c]=e.dataset.badd.split(' ');e.classList.toggle(c,+k<=AT)})};
 }
-/* opening line 2: plain red title over the test-system picture */
-titleCard(scenes[0],1,'因此，HIL测试系统需要为控制器供电',5,'什么是 HIL 测试？',false);
-/* chapter openers: quoted, white-outlined title over a picture from that chapter
-   [opener's first cue, background scene's first cue, background cue index, title] */
-[['首先，让我们先从一个最基本的问题开始：','在设计阶段，DYNA4 用于编辑模型和场景',6,'什么是 HIL 测试？'],   // Vector tool chain
- ['这就是我们接下来要探讨的主题：为什么要进行HIL测试','想象一下，一个项目耗费了数年时间、数亿美元资金',3,'为什么要进行 HIL 测试？'],   // Ariane 5 explosion
- ['接下来，我们来看一看 HIL 测试与黑盒测试之间的区别和联系','因此HIL 测试不能与黑盒测试画等号',4,'HIL 测试 vs 黑盒测试'],   // HIL ≠ black box
- ['最后，我们来看一下 HIL 测试存在的局限','现代开发流程强调测试左移',4,'HIL 测试的局限'],   // shift-left curve
-].forEach(([cue,src,at,title])=>{const s=scenes.find(x=>x.cues[0]===cue);s.svg='';delete s.grad;titleCard(s,0,src,at,title,true)});
+/* opening line 2 (topic page): big red title centred on a grey network backdrop */
+titleCard(scenes[0],1,'因此，HIL测试系统需要为控制器供电',5,'什么是 HIL 测试？',false,0,true);
+/* chapter openers: quoted, white-outlined title over a cover picture (hard cut, push-in, zoom blur, to black-and-white)
+   [opener's first cue, background scene's first cue (null → drawn picture), background cue index, title] */
+[['首先，让我们先从一个最基本的问题开始：','为了对控制器进行测试',1,'什么是 HIL 测试？',[960,380,.85,[T(960,495,'控制器',{size:32,w:700}),P(960,80,'模拟的外部环境',{fill:'#fff',stroke:C.blue,c:C.blue,size:30})]]],   // 2:56 controller in its environment
+ ['这就是我们接下来要探讨的主题：为什么要进行HIL测试','这些案例告诉我们，软件缺陷可能导致严重的后果',1,'为什么要进行 HIL 测试？',[960,292,.93]],   // 6:10 bug → shield → warning
+ ['接下来，我们来看一看 HIL 测试与黑盒测试之间的区别和联系',null,0,'HIL 测试 vs 黑盒测试'],   // drawn: black box vs open box
+ ['最后，我们来看一下 HIL 测试存在的局限','除此以外，HIL测试依赖物理仿真模型的精度',1,'HIL 测试的局限',[960,340,.79]],   // 10:31 model vs reality
+].forEach(([cue,src,at,title,fit])=>{const s=scenes.find(x=>x.cues[0]===cue);s.svg='';delete s.grad;titleCard(s,0,src,at,title,true,src?coverCopy(src,...fit):boxCover())});
 
 /* ---------- sound: adaptive tech music + sound effects ----------
    Everything is synthesised live with Web Audio (no audio files).
@@ -1261,8 +1316,8 @@ function render(si){cur=si;const s=scenes[si],old=[...scn.querySelectorAll('.sce
   music.melody({'01':0,'02':1,'03':2,'04':3}[cid]??4);   // each chapter has its own melody
   if(old.length&&cid!==render._chap)music.chapter(KEYS_BY_CHAP[cid]??0);if(old.length)music.sfx('trans');render._chap=cid;
   /* soft: the next page continues the same picture — show it at once underneath and only fade the old page out (no zoom/blur) */
-  scn.insertAdjacentHTML('afterbegin',`<div class="scene${s.soft?' soft':''}${s.grad===2?' g':''}${s.full?' full':''}"><svg viewBox="0 0 1920 800" xmlns="http://www.w3.org/2000/svg">${s.svg}</svg></div>`);root=scn.firstElementChild;
-  old.forEach(o=>{o.classList.add('out');if(s.soft)o.classList.add('soft');setTimeout(()=>o.remove(),750)});chap.textContent=s.ch;stage.classList.toggle('dark',!!s.dark);stage.classList.toggle('white',!!s.white);stage.classList.toggle('grad',!!s.grad);stage.classList.toggle('full',!!s.full);root.getBoundingClientRect()}
+  scn.insertAdjacentHTML('afterbegin',`<div class="scene${s.soft||s.cut?' soft':''}${s.grad===2?' g':''}${s.full?' full':''}"><svg viewBox="0 0 1920 800" xmlns="http://www.w3.org/2000/svg">${s.svg}</svg></div>`);root=scn.firstElementChild;
+  old.forEach(o=>{if(s.cut){o.remove();return}o.classList.add('out');if(s.soft)o.classList.add('soft');setTimeout(()=>o.remove(),750)});/* cut: old page gone at once */chap.textContent=s.ch;stage.classList.toggle('dark',!!s.dark);stage.classList.toggle('white',!!s.white);stage.classList.toggle('grad',!!s.grad);stage.classList.toggle('full',!!s.full);root.getBoundingClientRect()}
 function apply(ci){const s=scenes[cur],shown=[],added=[];
   root.querySelectorAll('[data-at]').forEach(e=>{const out=e.dataset.out,v=ci>=+e.dataset.at&&!(out!=null&&ci>=+out);if(v&&!e.classList.contains('on'))shown.push(e);e.classList.toggle('on',v)});
   root.querySelectorAll('[data-add]').forEach(e=>{const [k,cls]=e.dataset.add.split(' '),v=ci>=+k;if(v&&!e.classList.contains(cls))added.push(e);else if(!v&&e.classList.contains(cls)&&e.dataset.sfx==='car')music.stopLoops();e.classList.toggle(cls,v)});
