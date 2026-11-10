@@ -69,7 +69,9 @@ body.cold #hdr{opacity:0!important}
 .nb.go{animation:nbHop 3.4s both,hwGrey 1.6s 2.4s both}
 @keyframes nbHop{0%,68%{transform:none}71%{transform:translateY(-24px) rotate(-9deg)}78%{transform:rotate(-5deg)}90%,100%{transform:rotate(5deg) scale(1,.93)}}
 /* shot 2: ground control on Earth */
-.pxb.bad{animation:pxFade 2.4s .3s ease-in-out both}@keyframes pxFade{to{filter:grayscale(1) brightness(.92);opacity:.4}}   /* still; greys and fades, a lonely figure */
+.pxb.bad{animation:pxReach 1s cubic-bezier(.3,0,.3,1) both,pxFade 2.4s .5s ease-in-out both}
+@keyframes pxReach{to{transform:translate(18px,8px) rotate(5deg)}}   /* half a step toward Mars along the curve, leaning after the probe */
+@keyframes pxFade{to{filter:grayscale(1) brightness(.92);opacity:.4}}   /* then greys and fades, a lonely figure */
 /* shot 3: Therac-25 (serious) */
 .hw2.bad{animation:hwBack .45s .35s ease-out both,hwGrey 1.6s 1.4s both}
 @keyframes hwBack{50%{transform:translate(22px,-8px)}100%{transform:translateX(45px)}}
@@ -1329,7 +1331,7 @@ const sorrow=(at,d)=>`<g class="vig" data-add="${at} go" data-muffle="${d}"></g>
 const CAST=[   // [line whose scene gets the cast, add(svg)]
   /* a launch crew member at the left edge, watching: still while the rocket climbs, jolted by the boom (2.3 s), then slumped */
   [64,v=>v.insertAdjacentHTML('beforeend',`<g class="cast nb" data-add="1 go">${ch('newbie',285,640,238)}</g>`+sorrow(1,2.4))],
-  /* ground control standing on Earth: still; at the break-up he slowly greys and fades */
+  /* ground control standing on Earth: still; at the break-up he takes half a step toward Mars, then slowly greys and fades */
   [68,v=>v.insertAdjacentHTML('beforeend',`<g class="cast pxb" data-add="2 bad">${ch('pixel',190,529,160)}</g>`+sorrow(2,.3))],
   /* Therac-25, kept serious: still at first; at the fault she steps back, trembles, sinks and greys out */
   [72,v=>v.insertAdjacentHTML('beforeend',`<g class="cast hw2" data-add="2 bad"><g class="cast hb2" data-add="2 bad">${ch('heart',1380,640,330)}</g></g>`+sorrow(2,.6))],
