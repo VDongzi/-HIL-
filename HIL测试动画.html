@@ -1005,49 +1005,44 @@ titleCard(scenes[0],1,'因此，HIL测试系统需要为控制器供电',5,'什�
 
 /* ---------- sound: adaptive tech music + sound effects ----------
    Everything is synthesised live with Web Audio (no audio files).
-   Style: modern, minimal, friendly light electronics for an automotive-software explainer: a soft detuned pad with a
-   slowly moving filter, a quiet bouncy synth sequence with digital echo, a soft sub bass, occasional digital
-   sparkles and a clear but soft-toned upbeat groove (round kick, warm clap on 2 & 4, gentle shaker; no harsh hi-hats).
-   No lead melody, so it never competes with the narration. The air-conditioning story (hot summer, open/closed loop)
-   switches to a warmer, everyday sound: electric-piano chords over a walking bass with a lighter snap groove.
-   It follows the picture:
-   - energy (0–3) is set per line from how much animates: a static line lets the music recede (sequence filter
-     closes, bass drops out, the groove thins to kick + clap); new modules / data flows open the filter, add an
-     off-beat pluck layer and a fuller shaker pattern;
-   - key concepts and conclusions get a short lift (riser + shimmer + two brighter bars);
-   - scene changes use a short musical transition (soft swell + filter dip + low downbeat) instead of a hard cut;
-   - each scene picks a harmonic colour (intro, explain, life, bright, tense, thought, outro); it changes at the next bar.
-   Effects are small digital accents: a soft blip (at most one per line), a two-tone chime for a check mark, a low
-   tone for a cross, a soft pulse for a warning sign, glitch clicks for bugs, a filtered sub drop for explosions,
-   digital ticks for counters and a shimmer for the logo.
+   Style: calm tech at 100 BPM for an automotive-software explainer: an airy sine/triangle pad (rhythmic pulses in the main
+   and reflective grooves) with a faint shimmer,
+   a relaxed half-time groove (kick on 1 and the "and" of 3, one soft backbeat, off-beat hats) and a light bouncing bass;
+   a soft rounded melody plays in the second half of every 16 bars and tiny digital chirps add the tech colour.
+   Each chapter has its own melody.
+   The air-conditioning story switches to a warm FM piano over a walking bass; the accidents use a dark half-time
+   groove with a low drone and a slow glass motif; chapter 04 runs in a reflective half-time; intro and ending have no drums.
+   It follows the picture: energy (0-3) per line opens the filter and adds stabs/hats; key concepts get a short lift;
+   scene changes use a soft swell; chapter changes a clap roll into a crash.
    Sound starts with Play, pauses with Pause, restarts with the video and fades out over the outro. */
 const music=(()=>{
-  const BPM=128,S=60/BPM/4,FXVOL=.3;let VOL=.4;   // VOL is lowered while the recorded narration plays   // S = one sixteenth note
+  const BPM=100,S=60/BPM/4,FXVOL=.3;let VOL=.4;   // S = one sixteenth note
   const mtof=m=>440*Math.pow(2,(m-69)/12);
-  const ch=(pad,bass,seq)=>({pad,bass,seq});   // pad voicing, bass root, 4 sequence tones
+  const ch=(pad,bass,seq)=>({pad,bass,seq});   // pad voicing, bass root, 4 arpeggio tones
   const PROGS={
-    E:[ch([55,60,64,71],48,[72,76,79,83]),ch([57,60,64,67],45,[69,72,76,79]),ch([53,57,60,64],41,[69,72,76,77]),ch([55,59,62,69],43,[67,71,74,79])],  // Cmaj7 Am7 Fmaj7 G6/9
-    L:[ch([53,57,60,64],41,[65,69,72,76]),ch([52,55,59,62],40,[64,67,71,74]),ch([50,53,57,60],38,[62,65,69,72]),ch([48,55,60,62],36,[60,64,67,74])],  // Fmaj7 Em7 Dm7 Cadd9 (everyday, warm)
-    B:[ch([55,60,64,67],48,[72,76,79,83]),ch([55,59,62,69],43,[71,74,79,81]),ch([57,60,64,67],45,[72,76,79,84]),ch([53,57,60,64],41,[72,76,77,81])],  // Cmaj7 G6/9 Am7 Fmaj7
-    T:[ch([50,53,57,62],38,[62,65,69,74]),ch([50,53,58,62],46,[62,65,70,74]),ch([50,55,58,62],43,[62,67,70,74]),ch([49,52,57,61],45,[61,64,69,73])],  // Dm Bb Gm A
-    D:[ch([50,57,60,64],38,[62,69,72,76]),ch([50,53,57,62],46,[62,65,69,74]),ch([53,57,60,64],41,[65,69,72,76]),ch([50,55,60,62],48,[62,67,72,74])]   // Dm9 Bbmaj7 Fmaj7 Csus2
+    E:[ch([48,55,62,64],36,[67,71,74,76]),ch([45,52,59,64],33,[64,67,71,72]),ch([41,48,55,64],29,[64,67,69,72]),ch([43,50,57,62],31,[62,67,69,74])],   // Cmaj9 Am9 Fmaj9 Gsus: intro/outro, open and airy
+    A:[ch([57,60,64,71],45,[69,72,76,79]),ch([53,57,60,67],41,[65,69,72,76]),ch([55,60,62,67],48,[67,72,74,76]),ch([55,59,62,67],43,[67,71,74,79])],   // Am9 Fmaj9 Cadd9 G: main explainer
+    B:[ch([55,60,64,67],48,[72,76,79,84]),ch([55,59,62,67],47,[71,74,79,83]),ch([57,60,64,69],45,[69,72,76,81]),ch([53,57,62,65],41,[69,72,74,77])],   // C G/B Am F(add9): bright
+    L:[ch([53,57,60,64],41,[65,69,72,76]),ch([52,55,59,62],40,[64,67,71,74]),ch([50,53,57,60],38,[62,65,69,72]),ch([48,55,60,62],36,[60,64,67,74])],   // Fmaj7 Em7 Dm7 Cadd9: everyday, warm
+    T:[ch([50,57,60,65],38,[62,65,69,74]),ch([50,53,58,62],46,[62,65,70,74]),ch([48,55,60,64],48,[60,64,67,72]),ch([49,52,57,61],45,[61,64,69,73])],   // Dm Bb C A: the accidents
+    P:[ch([53,57,60,64],41,[65,69,72,76]),ch([55,59,62,67],43,[67,71,74,79]),ch([52,55,59,64],40,[64,67,71,76]),ch([57,60,64,69],45,[69,72,76,81])],   // F G Em Am: the climax, uplifting
+    D:[ch([52,55,59,62],40,[64,67,71,74]),ch([52,55,60,64],48,[64,67,71,76]),ch([50,55,59,62],43,[62,67,71,74]),ch([50,54,57,62],42,[62,66,69,74])]    // Em7 Cmaj7 G D/F#: reflective
   };
-  // seq: synth sequence on/off; keys: electric-piano comping instead (everyday mood); cap: highest energy allowed;
-  // base: energy floor; spark: digital sparkles; drums: 0 none / 1 upbeat groove / 2 light snap groove / 3 half-time / 4 dark half-time groove
+  // lead: glass melody in the second half of each 16 bars; blip: digital chirps; sweep: 8-bar filter sweep
+  // drums: 0 none / 1 relaxed half-time / 2 warm everyday groove / 3 reflective half-time / 4 dark half-time / 5 climax; cap/base: energy ceiling/floor
+  // leadAll: melody in every bar, not only the second half
   const MOODS={
-    intro:  {prog:'E',seq:0,keys:0,cap:0,base:0,spark:1,drums:0},
-    explain:{prog:'E',seq:1,keys:0,cap:3,base:2,spark:1,drums:1},
-    life:   {prog:'L',seq:0,keys:1,cap:3,base:2,spark:0,drums:1},
-    bright: {prog:'B',seq:1,keys:0,cap:3,base:2,spark:1,drums:1},
-    tense:  {prog:'T',seq:1,keys:0,cap:1,base:1,spark:0,drums:4},   // the three accidents: dark, restrained half-time
-    thought:{prog:'D',seq:1,keys:0,cap:3,base:2,spark:0,drums:1},
-    outro:  {prog:'E',seq:0,keys:0,cap:0,base:0,spark:1,drums:0}
+    intro:  {prog:'E',lead:0, blip:0,sweep:1,drums:0,cap:0,base:0,spark:1},
+    explain:{prog:'A',lead:1, blip:1,sweep:1,drums:1,cap:3,base:2},
+    life:   {prog:'L',lead:.8,blip:0,sweep:0,drums:2,cap:3,base:2},
+    bright: {prog:'B',lead:1.1,blip:1,sweep:1,drums:1,cap:3,base:2},
+    tense:  {prog:'T',lead:0, blip:0,sweep:0,drums:4,cap:1,base:1},
+    peak:   {prog:'P',lead:1.15,leadAll:1,blip:1,sweep:1,drums:5,cap:3,base:3},
+    thought:{prog:'D',lead:.8,blip:1,sweep:1,drums:3,cap:3,base:2},
+    outro:  {prog:'E',lead:0, blip:0,sweep:1,drums:0,cap:0,base:0,spark:1}
   };
-  /* per-chapter arpeggio figures through the chord tones (4 = top tone an octave up, -1 = rest): 01, 02, 03, 04, intro/ending */
-  const SEQS=[[0,2,1,3,-1,2,4,2,0,2,1,3,2,-1,4,1],[0,-1,4,-1,2,-1,4,1,0,-1,4,-1,3,-1,4,2],[0,1,2,3,-1,-1,2,1,0,1,2,3,4,-1,3,-1],[3,2,1,0,-1,1,2,-1,3,2,1,0,4,-1,2,-1],[0,2,1,3,-1,2,4,2,0,2,1,3,2,-1,4,1]];
-  const KEYS=[0,-1,-1,1,-1,-1,2,-1,0,-1,-1,1,-1,3,-1,-1];   // electric-piano comping rhythm, everyday mood
   let mel=4,wantMel=4,duck,hatP,shkP,bellP,tr=0,wantTr=0,fill=0,padBus,loops=[],ctx,master,fx,delay,seqF,timer=null,step=0,next=0,on=true,fxOn=true,fading=false,mood='intro',want='intro',mbar=0,chord=PROGS.E[0],
-      energy=0,lift=0;   // lift: bars of emphasis left
+      energy=0,lift=0,peakAt=0;   // lift: bars of emphasis left; peakAt: audio time the climax starts
   function init(){
     ctx=new (window.AudioContext||window.webkitAudioContext)();
     /* glue compressor -> make-up gain (louder music) -> limiter, so the louder mix never clips */
@@ -1075,83 +1070,111 @@ const music=(()=>{
   const noiseSrc=(t,len)=>{const n=ctx.createBufferSource();n.buffer=noiseBuf();n.start(t);n.stop(t+len);return n};
   const lvl=()=>{const M=MOODS[mood];return Math.min(M.cap,Math.max(M.base,energy)+(lift?1:0))};
   /* ---- music voices ---- */
-  // soft detuned pad, its filter breathing slowly
-  function pad(notes,t,dur,bright){
-    const f=ctx.createBiquadFilter();f.type='lowpass';f.Q.value=.6;f.frequency.setValueAtTime(700+bright*250,t);f.frequency.linearRampToValueAtTime(1200+bright*350,t+dur/2);f.frequency.linearRampToValueAtTime(700+bright*250,t+dur);
-    const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.03,t+1);g.gain.setValueAtTime(.03,t+dur-.3);g.gain.linearRampToValueAtTime(0,t+dur+1);
-    f.connect(g);g.connect(padBus);
-    notes.forEach(n=>[-9,9].forEach(c=>{const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtof(n);o.detune.value=c;o.connect(f);o.start(t);o.stop(t+dur+1.1)}));
-  }
-  function seqNote(n,t,v){const g=ctx.createGain();env(g,t,v,.004,S*1.8);osc('triangle',mtof(n),t,S*1.8,seqF,g);const g2=ctx.createGain();env(g2,t,v*.35,.003,S);osc('square',mtof(n),t,S,seqF,g2)}
-  // electric piano: sine body + a soft bell-like 2nd partial, gentle decay
-  function keys(notes,t,v){notes.forEach(n=>{const g=ctx.createGain(),g2=ctx.createGain();env(g,t,v,.006,.9);env(g2,t,v*.25,.003,.25);osc('sine',mtof(n),t,.9,master,g);osc('sine',mtof(n)*2,t,.25,master,g2)})}
-  function pluckBass(n,t){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.frequency.value=700;env(g,t,.16,.005,.35);f.connect(g);g.connect(master);const o=ctx.createOscillator();o.type='triangle';o.frequency.value=mtof(n);o.connect(f);o.start(t);o.stop(t+.4)}
-  function kick(t,v){v*=1.35;const g=ctx.createGain();env(g,t,v,.003,.3);const o=osc('sine',150,t,.3,master,g);o.frequency.exponentialRampToValueAtTime(48,t+.09);
-    const c=ctx.createGain();env(c,t,v*.5,.001,.025);osc('triangle',1100,t,.03,master,c)}   // short click on top so the beat cuts through the voice
-  function hat(t,v){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='highpass';f.frequency.value=7500;env(g,t,v,.001,.045);noiseSrc(t,.06).connect(f);f.connect(g);g.connect(hatP)}
-  function clap(t,v){v*=1.45;{const b=ctx.createGain();env(b,t,v*.9,.002,.11);const o=osc('triangle',200,t,.12,master,b);o.frequency.exponentialRampToValueAtTime(150,t+.1)}   // snare body under the clap
-    const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=1300;f.Q.value=.9;f.connect(g);g.connect(master);g.connect(delay);
-    g.gain.setValueAtTime(0,t);[0,.011,.022].forEach(d=>{g.gain.linearRampToValueAtTime(v,t+d+.002);g.gain.linearRampToValueAtTime(v*.3,t+d+.009)});g.gain.exponentialRampToValueAtTime(.0001,t+.16);noiseSrc(t,.18).connect(f)}
+  // airy pad: soft sine/triangle stack (no saw buzz) that breathes with the kick, plus a faint shimmer two octaves up into the echo
+  function pad(notes,t,dur,L,v=.03){const f=ctx.createBiquadFilter();f.type='lowpass';f.Q.value=.3;f.frequency.value=1400+L*300;
+    const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+1.2);g.gain.setValueAtTime(v,t+dur-.4);g.gain.linearRampToValueAtTime(0,t+dur+1);f.connect(g);g.connect(padBus);
+    notes.forEach((n,k)=>[-4,4].forEach(c=>{const o=ctx.createOscillator();o.type=k?'triangle':'sine';o.frequency.value=mtof(n);o.detune.value=c;o.connect(f);o.start(t);o.stop(t+dur+1.1)}));
+    const sg=ctx.createGain();sg.gain.setValueAtTime(0,t);sg.gain.linearRampToValueAtTime(.006,t+1.5);sg.gain.linearRampToValueAtTime(0,t+dur+.5);sg.connect(padBus);sg.connect(delay);
+    const so=ctx.createOscillator();so.type='sine';so.frequency.value=mtof(notes[3]+24);so.connect(sg);so.start(t);so.stop(t+dur+.6)}
+  // rhythmic pad: the same airy chord, played as short swelling pulses in a syncopated pattern (lighter than a held pad)
+  function padPulse(notes,t,len,v,L){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.Q.value=.5;f.frequency.value=1800+L*400;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.02);g.gain.setValueAtTime(v,t+len*.45);g.gain.exponentialRampToValueAtTime(.0001,t+len);f.connect(g);g.connect(padBus);
+    notes.forEach((n,k)=>[-5,5].forEach(c=>{const o=ctx.createOscillator();o.type=k?'triangle':'sine';o.frequency.value=mtof(n);o.detune.value=c;o.connect(f);o.start(t);o.stop(t+len+.05)}))}
+  // off-beat house bass: a short saw with a closing filter, plus a sine for weight
+  function bass(n,t,v,len=.18){const f=ctx.createBiquadFilter(),g=ctx.createGain(),g2=ctx.createGain();f.type='lowpass';f.Q.value=3;f.frequency.setValueAtTime(1200,t);f.frequency.exponentialRampToValueAtTime(220,t+len*.8);env(g,t,v,.004,len);f.connect(master);osc('sawtooth',mtof(n),t,len,f,g);
+    env(g2,t,v*.8,.004,len);osc('sine',mtof(n),t,len,master,g2)}
+  function sub(n,t,len,v=.11){const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.04);g.gain.setValueAtTime(v,t+len-.15);g.gain.linearRampToValueAtTime(0,t+len);osc('sine',mtof(n),t,len,master,g)}
+  // syncopated chord stab (pumps with the kick)
+  function stab(notes,t,v){const f=ctx.createBiquadFilter();f.type='lowpass';f.Q.value=2;f.frequency.setValueAtTime(3200,t);f.frequency.exponentialRampToValueAtTime(700,t+.15);f.connect(padBus);f.connect(delay);
+    notes.forEach(n=>{const g=ctx.createGain();env(g,t,v,.003,.18);osc('sawtooth',mtof(n),t,.18,f,g)})}
+  // glass lead: FM bell with an inharmonic 3.5 ratio, clean and digital
+  function glass(n,t,v,len=.9){const c=ctx.createOscillator(),m=ctx.createOscillator(),mg=ctx.createGain(),g=ctx.createGain(),fr=mtof(n);c.frequency.value=fr;m.frequency.value=fr*3.5;
+    mg.gain.setValueAtTime(fr*2.2,t);mg.gain.exponentialRampToValueAtTime(fr*.05,t+len*.6);m.connect(mg);mg.connect(c.frequency);env(g,t,v,.003,len);c.connect(g);g.connect(bellP);g.connect(delay);
+    c.start(t);m.start(t);c.stop(t+len+.05);m.stop(t+len+.05)}
+  // soft lead for the melody: a round sine with a little detuned triangle, gentle attack, filtered, a light echo
+  function soft(n,t,v,len=.75){const f=ctx.createBiquadFilter(),g=ctx.createGain(),fr=mtof(n);f.type='lowpass';f.frequency.value=1600;f.Q.value=.4;f.connect(bellP);f.connect(delay);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.035);g.gain.exponentialRampToValueAtTime(.0001,t+len);g.connect(f);
+    [['sine',0,1],['triangle',6,.45]].forEach(([ty,c,a])=>{const o=ctx.createOscillator(),og=ctx.createGain();o.type=ty;o.frequency.value=fr;o.detune.value=c;og.gain.value=a;o.connect(og);og.connect(g);o.start(t);o.stop(t+len+.05)})}
+  // FM electric piano for the everyday story
+  function ep(notes,t,v){notes.forEach(n=>{const c=ctx.createOscillator(),m=ctx.createOscillator(),mg=ctx.createGain(),g=ctx.createGain(),fr=mtof(n);c.frequency.value=fr;m.frequency.value=fr;
+    mg.gain.setValueAtTime(fr*1.2,t);mg.gain.exponentialRampToValueAtTime(fr*.1,t+.5);m.connect(mg);mg.connect(c.frequency);env(g,t,v,.005,1);c.connect(g);g.connect(master);c.start(t);m.start(t);c.stop(t+1.05);m.stop(t+1.05)})}
+  // digital chirp: a tiny square note that bends up a fifth
+  function blip(n,t){const g=ctx.createGain();env(g,t,.016,.001,.07);g.connect(delay);osc('square',mtof(n),t,.07,bellP,g).frequency.exponentialRampToValueAtTime(mtof(n+7),t+.04)}
+  function kick(t,v){const g=ctx.createGain();env(g,t,v,.002,.32);osc('sine',160,t,.32,master,g).frequency.exponentialRampToValueAtTime(46,t+.1);
+    const c=ctx.createGain();env(c,t,v*.35,.001,.02);osc('square',1500,t,.025,master,c)}   // short click so the beat cuts through the voice
+  function clap(t,v){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=1500;f.Q.value=1;f.connect(g);g.connect(master);g.connect(delay);
+    g.gain.setValueAtTime(0,t);[0,.01,.02].forEach(d=>{g.gain.linearRampToValueAtTime(v,t+d+.002);g.gain.linearRampToValueAtTime(v*.3,t+d+.008)});g.gain.exponentialRampToValueAtTime(.0001,t+.18);noiseSrc(t,.2).connect(f);
+    const b=ctx.createGain();env(b,t,v*.6,.002,.1);osc('triangle',210,t,.1,master,b).frequency.exponentialRampToValueAtTime(160,t+.08)}
+  function hat(t,v,len=.04){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='highpass';f.frequency.value=8000;env(g,t,v,.001,len);noiseSrc(t,len+.02).connect(f);f.connect(g);g.connect(hatP)}
+  function rim(t,v){const g=ctx.createGain();env(g,t,v,.001,.04);osc('square',1750,t,.04,shkP,g)}
   function snap(t,v){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=2200;f.Q.value=2;env(g,t,v,.002,.07);noiseSrc(t,.09).connect(f);f.connect(g);g.connect(master)}
   function shaker(t,v){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=4800;f.Q.value=1.4;env(g,t,v,.014,.07);noiseSrc(t,.09).connect(f);f.connect(g);g.connect(shkP)}
+  function crash(t){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='highpass';f.frequency.value=4500;env(g,t,.04,.005,1.6);noiseSrc(t,1.7).connect(f);f.connect(g);g.connect(master)}
+  function riser(t,len){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.Q.value=1.5;f.frequency.setValueAtTime(500,t);f.frequency.exponentialRampToValueAtTime(7000,t+len);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.03,t+len*.95);g.gain.linearRampToValueAtTime(0,t+len);noiseSrc(t,len+.05).connect(f);f.connect(g);g.connect(master)}
   function pump(t){padBus.gain.cancelScheduledValues(t);padBus.gain.setValueAtTime(.45,t);padBus.gain.linearRampToValueAtTime(1,t+S*3)}
-  function stab(notes,t,v){notes.forEach(n=>{const g=ctx.createGain();env(g,t,v,.003,.16);osc('triangle',mtof(n),t,.16,padBus,g)})}   // off-beat chord stab (pumps with the kick)
-  function bell(n,t,v){const g=ctx.createGain(),g2=ctx.createGain();env(g,t,v,.003,.5);env(g2,t,v*.4,.002,.12);g.connect(delay);osc('sine',mtof(n),t,.5,bellP,g);osc('sine',mtof(n)*3,t,.12,bellP,g2)}
-  function mari(n,t,v){const g=ctx.createGain(),g2=ctx.createGain();env(g,t,v*1.1,.002,.28);env(g2,t,v*.3,.001,.06);osc('triangle',mtof(n),t,.28,bellP,g);osc('sine',mtof(n)*4,t,.06,bellP,g2)}   // marimba-like
-  function softLead(n,t,v,dark){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.frequency.value=dark?900:2400;f.connect(bellP);f.connect(delay);
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.06);g.gain.exponentialRampToValueAtTime(.0001,t+(dark?1.6:.8));
-    const o=ctx.createOscillator();o.type='triangle';o.frequency.value=mtof(n);o.connect(g);g.connect(f);o.start(t);o.stop(t+(dark?1.7:.9))}
-  const lead=(k,n,t,v)=>k==='mari'?mari(n,t,v):k==='soft'?softLead(n,t,v*1.1):bell(n,t,v);
-  function crash(t){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='highpass';f.frequency.value=4500;env(g,t,.05,.005,1.6);noiseSrc(t,1.7).connect(f);f.connect(g);g.connect(master)}
-  function offPluck(n,t){const g=ctx.createGain();env(g,t,.035,.003,.18);g.connect(delay);osc('sine',mtof(n+12),t,.18,bellP,g)}
-  function sub(n,t,len){const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.13,t+.04);g.gain.setValueAtTime(.13,t+len-.15);g.gain.linearRampToValueAtTime(0,t+len);osc('sine',mtof(n),t,len,master,g)}
-  function sparkle(t){const n=chord.seq[3]+12,g=ctx.createGain();env(g,t,.03,.002,.6);g.connect(delay);osc('sine',mtof(n),t,.6,bellP,g)}
-  // a playful hook over 2 bars (chord-tone indices, -1 = rest) — plays in the "B" half of every 16-bar section
-  /* a different 4-bar melody for each chapter (chord-tone indices, -1 = rest), each with its own lead sound, so the 10 minutes don't
-     sound like one loop: 01 bell (curious), 02 marimba (bright, syncopated), 03 soft lead (thoughtful), 04 bell (forward-looking), intro/ending soft */
-  const HOOKS=[[0,-1,-1,2,-1,-1,1,-1,3,-1,2,-1,-1,-1,-1,-1,2,-1,-1,3,-1,-1,2,-1,1,-1,0,-1,-1,-1,-1,-1,0,-1,2,-1,3,-1,4,-1,-1,-1,3,-1,2,-1,-1,-1,1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
-    [4,-1,3,-1,-1,2,-1,3,-1,-1,4,-1,-1,-1,-1,-1,3,-1,2,-1,-1,1,-1,2,-1,-1,0,-1,-1,-1,-1,-1,0,-1,1,-1,2,-1,3,-1,4,-1,-1,-1,3,-1,4,-1,-1,-1,4,-1,-1,-1,3,-1,-1,-1,-1,-1,-1,-1,-1,-1],
-    [2,-1,-1,-1,1,-1,-1,-1,0,-1,-1,-1,1,-1,2,-1,3,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,3,-1,-1,-1,4,-1,-1,-1,3,-1,1,-1,2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
-    [1,-1,1,-1,2,-1,-1,-1,1,-1,0,-1,-1,-1,-1,-1,1,-1,1,-1,3,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,2,-1,2,-1,4,-1,-1,-1,3,-1,2,-1,1,-1,-1,-1,0,-1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
-    [0,-1,-1,-1,2,-1,-1,-1,4,-1,-1,-1,-1,-1,-1,-1,3,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,-1,-1,-1,2,-1,-1,-1,3,-1,-1,-1,4,-1,-1,-1,2,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]],LEADS=['bell','mari','soft','bell','soft'];
-  /* the accidents: a slow, low minor motif in a muffled tone with a long echo */
-  const DARK=[2,-1,-1,-1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,2,-1,-1,-1,-1,-1,3,-1,2,-1,-1,-1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1];
+  /* ---- patterns (chord-tone indices 0-3, 4 = lowest tone an octave up, -1 = rest) ---- */
+  const mk=(...ns)=>{const a=Array(64).fill(-1);ns.forEach(([p,v])=>a[p]=v);return a};   // 4-bar melody from [step, tone] pairs
+  // glass melodies per chapter: 01 curious, 02 bright and syncopated, 03 sparse and thoughtful, 04 forward-looking, intro/ending
+  const HOOKS=[mk([0,4],[3,3],[6,2],[10,0],[16,1],[18,2],[24,3],[32,4],[35,4],[38,3],[40,2],[44,3],[48,2],[54,1]),
+    mk([0,2],[3,3],[6,4],[10,3],[14,2],[16,1],[19,2],[22,3],[32,2],[35,3],[38,4],[42,4],[44,3],[48,4],[51,3],[54,2]),
+    mk([0,3],[8,2],[12,1],[16,0],[32,1],[40,2],[44,3],[48,2]),
+    mk([0,0],[2,1],[4,2],[8,4],[16,3],[22,2],[32,0],[34,1],[36,2],[40,4],[44,3],[48,4]),
+    mk([0,2],[8,3],[16,4],[32,3],[40,2],[48,1])];
+  const DARK=mk([0,2],[16,1],[32,0],[38,1],[48,2]);   // the accidents: a slow, low glass motif
   function sched(){
     while(next<ctx.currentTime+.2){
+      if(peakAt&&next>=peakAt){peakAt=0;if(want!=='peak'&&step%16)step+=16-step%16;want='peak'}
       const i=step%16;
-      if(i===0){if(wantMel!==mel){mel=wantMel}if(want!==mood||wantTr!==tr){mood=want;tr=wantTr;mbar=0}else if(step)mbar++;if(lift)lift--;if(fill===2){crash(next);fill=0}}
-      const M=MOODS[mood],L=lvl(),T=n=>n+tr,sec=mbar%16,B=sec>=8,brk=false;   // B half: hook on; bar 16: breakdown (no kick)
+      if(i===0){if(wantMel!==mel)mel=wantMel;if(want!==mood||wantTr!==tr){if(want==='peak'&&mood!=='peak')crash(next);mood=want;tr=wantTr;mbar=0}else if(step)mbar++;if(lift)lift--;if(fill===2){crash(next);fill=0}}
+      const M=MOODS[mood],L=lvl(),T=n=>n+tr,sec=mbar%16,B=sec>=8,brk=M.drums===1&&sec===15;   // B half: melody on; bar 16: breakdown (no kick)
       chord=PROGS[M.prog][mbar%4];
-      if(i===0){pad(chord.pad.map(T),next,S*16,L);seqF.frequency.setTargetAtTime(M.drums===4?520:[650,1100,1800,2800][L],next,.3);if(sec===0&&mbar&&M.drums===1)crash(next)}
-      const Q=SEQS[mel];if(M.seq&&Q[i]>=0)seqNote(T(Q[i]===4?chord.seq[0]+12:chord.seq[Q[i]]),next,i%4===0?.05:.036);
-      if(M.keys){const k=KEYS[i];if(k>=0)keys([T(chord.seq[k]),T(chord.seq[(k+2)%4])],next,i===0?.05:.04);
-        if(i%4===0)pluckBass(T(chord.bass+[0,7,12,7][i/4]),next)}
-      else if(M.drums===4){if(i===0||i===6||i===10)pluckBass(T(chord.bass),next);if(i===0)sub(T(chord.bass),next,S*16)}   // dark: sparse bass + a held low drone
-      else if(L>=1&&i%2===0&&!brk)pluckBass(T(chord.bass+(i===6||i===14?12:0)),next);   // pulsing 8th-note bass drives it forward
-      if(L>=1&&i===0&&!M.keys&&!brk&&M.drums!==4)sub(T(chord.bass),next,S*4);
-      if(M.drums===1&&i%4===2&&!brk)stab([chord.pad[1],chord.pad[2],chord.pad[3]].map(n=>T(n+12)),next,.022);   // bouncy off-beat chord stabs
-      if((M.drums===1||mood==='life')&&B){const h=HOOKS[mel][(mbar%4)*16+i];if(h>=0)lead(LEADS[mel],T((h===4?chord.seq[0]+12:chord.seq[h])+12),next,.05)}
-      if(M.drums===4){const h=DARK[(mbar%4)*16+i];if(h>=0)softLead(T(chord.seq[h]-12),next,.07,true)}   // accidents: slow low motif
-      if(L>=2&&i%4===2)offPluck(T(chord.seq[(i/2+mbar)%4]),next);
-      if(L>=3&&i%4===3&&i!==15)offPluck(T(chord.seq[(i+1)%4]),next);
-      if(M.drums===1&&!brk){   // upbeat groove: kick on every beat (pads pump with it), clap 2 & 4, off-beat shaker, 16ths when busy
-        if(i%4===0){kick(next,i%8===0?.22:.17);pump(next)}
-        if(L>=2&&i===10)kick(next,.12);
-        if(i===4||i===12)clap(next,.11);
-        if(i%4===2){hat(next,.07);shaker(next,.03)}else if(i%2===1)hat(next,L>=2||B?.03:.02);
-        if((L>=3||sec===7)&&i===15)clap(next,.05)}
-      if(brk&&i>=12)clap(next,.03+(i-12)*.02);   // breakdown bar: a short clap build into the next section
-      if(M.drums===2){   // light everyday groove: soft kick, finger snaps on 2 & 4, shaker on the off-beats
-        if(i===0||i===8||(L>=2&&i===10)){kick(next,.17);pump(next)}
-        if(i===4||i===12)snap(next,.1);
-        if(i%4===2)shaker(next,.022)}
-      if(M.drums===3&&i===0)kick(next,.18);   // tense: a single half-time pulse
-      if(M.drums===4){   // dark half-time: heavy kick on 1 (+ a push before 3), one deep backbeat on 3, quiet off-beat hats
-        if(i===0){kick(next,.24);pump(next)}
-        if(i===10)kick(next,.13);
-        if(i===8)clap(next,.12);
-        if(i%4===2)hat(next,.03)}
-      if(M.spark&&i===10&&mbar%2===1)sparkle(next);
+      const PP={1:[0,3,6,10,12],3:[0,6,10],5:[0,3,6,10,12]}[M.drums],up=n=>T(n<55?n+12:n);   // pad pulse rhythm (3+3+4+2+4 sixteenths); voicing lifted out of the low range
+      if(PP){const k=PP.indexOf(i);if(k>=0)padPulse(chord.pad.map(up),next,S*((PP[k+1]??16)-i)*.95,i===0?.026:.02,L)}
+      if(i===0){if(PP)pad(chord.pad.map(up),next,S*16,L,.008);else pad(chord.pad.map(T),next,S*16,L);
+        const sw=M.sweep?.75+.5*(.5-.5*Math.cos(mbar%8/8*2*Math.PI)):1;   // the arpeggio filter breathes over 8 bars
+        seqF.frequency.setTargetAtTime(M.drums===4?520:[650,1100,1800,2800][L]*sw,next,M.sweep?S*6:.3);
+        if(sec===0&&mbar&&(M.drums===1||M.drums===5))crash(next);
+        if(M.drums&&M.drums!==4&&sec%8===7)riser(next,S*16)}   // a soft riser into every 8-bar phrase
+      if(M.lead&&(B||M.leadAll)&&M.drums!==2){const h=HOOKS[mel][(mbar%4)*16+i];if(h>=0)soft(T((h===4?chord.seq[0]+12:chord.seq[h])+12),next,.045*M.lead)}
+      if(M.blip&&mbar%2===1&&(i===7||i===13))blip(T(chord.seq[i===7?2:3]+24),next);
+      if(M.spark&&i===10&&mbar%2===1)glass(T(chord.seq[3]+12),next,.025,1.4);
+      if(M.drums===1){   // relaxed half-time: kick on 1 and the "and" of 3, one backbeat on 3, off-beat 8th hats, a light bounce in the bass
+        if(!brk){if(i===0||i===10){kick(next,i?.15:.19);pump(next)}
+          if(i===0)sub(T(chord.bass),next,S*6,.08);
+          if(i===8)clap(next,.09);
+          if(i%4===2)hat(next,.035,.09);
+          if(i===6||i===14)bass(T(chord.bass+12),next,.07);
+          if(L>=2&&i===6)stab([chord.pad[1],chord.pad[2],chord.pad[3]].map(n=>T(n+12)),next,.016)}
+        else if(i>=12)clap(next,.02+(i-12)*.01)}   // breakdown bar: a short clap build into the next section
+      if(M.drums===5){   // climax: four-on-the-floor, clap on 2 & 4, off-beat bass and open hats, 16th ticks, syncopated stabs
+        if(i%4===0){kick(next,.19);pump(next)}
+        if(i===0)sub(T(chord.bass),next,S*3,.08);
+        if(i%4===2){bass(T(chord.bass+(i===6||i===14?12:0)),next,.09);hat(next,.045,.1)}
+        if(i===11)bass(T(chord.bass+7),next,.05,.1);
+        if(i===4||i===12)clap(next,.1);
+        if(i%2===1)hat(next,.014);
+        if(i===3||i===10)stab([chord.pad[1],chord.pad[2],chord.pad[3]].map(n=>T(n+12)),next,.017)}
+      if(M.drums===2){   // warm everyday: FM piano chords, walking bass, soft kick, snaps on 2 & 4, shaker, a soft glass melody
+        if(i===0||i===6||i===10)ep([chord.seq[0],chord.seq[1],chord.seq[2]].map(T),next,i?.035:.045);
+        if(i%4===0)bass(T(chord.bass+[0,7,12,7][i/4]),next,.08,.3);
+        if(i===0||i===8){kick(next,.16);pump(next)}
+        if(i===4||i===12)snap(next,.09);
+        if(i%2===1)shaker(next,i%4===3?.025:.015);
+        if(B){const h=HOOKS[1][(mbar%4)*16+i];if(h>=0)soft(T((h===4?chord.seq[0]+12:chord.seq[h])+12),next,.034)}}
+      if(M.drums===3){   // reflective half-time: kick on 1 and the "and" of 3, one backbeat on 3, dotted bass
+        if(i===0||i===10){kick(next,.18);pump(next)}
+        if(i===8)clap(next,.09);
+        if(i===0||i===3||i===6||i===10)bass(T(chord.bass),next,.08,.22);
+        if(i%4===2)hat(next,.035,.08);
+        if(i===14)rim(next,.025)}
+      if(M.drums===4){   // the accidents: heavy, restrained half-time over a low drone
+        if(i===0){kick(next,.22);pump(next);sub(T(chord.bass),next,S*16,.1)}
+        if(i===10)kick(next,.12);
+        if(i===8)clap(next,.1);
+        if(i%2===0)bass(T(chord.bass),next,.05,.15);
+        if(i%4===2)hat(next,.025);
+        const h=DARK[(mbar%4)*16+i];if(h>=0)glass(T(chord.seq[h]),next,.05,1.8)}
       if(fill===1&&i>=8){clap(next,.03+(i-8)*.012);if(i===15)fill=2}   // chapter change: clap roll into a crash on the next downbeat
       next+=S;step++;
     }
@@ -1168,7 +1191,7 @@ const music=(()=>{
     lift(t){   // key concept / conclusion: short riser and an open-filter shimmer
       const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.Q.value=2;f.frequency.setValueAtTime(800,t);f.frequency.exponentialRampToValueAtTime(6000,t+.9);
       g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.05,t+.8);g.gain.linearRampToValueAtTime(0,t+1);noiseSrc(t,1).connect(f);f.connect(g);g.connect(fx);
-      chord.seq.forEach((m,k)=>{const g2=ctx.createGain();env(g2,t+.9+k*.06,.03,.003,.8);g2.connect(delay);osc('sine',mtof(m+12),t+.9+k*.06,.8,fx,g2)})},
+      chord.seq.forEach((m,k)=>{const g2=ctx.createGain();env(g2,t+.9+k*.06,.015,.003,.8);g2.connect(delay);osc('sine',mtof(m),t+.9+k*.06,.8,fx,g2)})},
     ok(t){[0,.09].forEach((d,k)=>{const g=ctx.createGain();env(g,t+d,.07,.003,.35);g.connect(delay);osc('sine',mtof(k?88:84),t+d,.35,fx,g)})},
     no(t){const g=ctx.createGain(),f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=700;env(g,t,.09,.005,.3);f.connect(g);g.connect(fx);
       const o=ctx.createOscillator();o.type='square';o.frequency.setValueAtTime(196,t);o.frequency.linearRampToValueAtTime(147,t+.25);o.connect(f);o.start(t);o.stop(t+.32)},
@@ -1204,7 +1227,8 @@ const music=(()=>{
     warm(){if(!ctx)init();ctx.resume()},   // create/unlock the audio context inside a user click
     /* fade out and stop running sound loops (the car) — on scene change and restart */
     stopLoops(){if(!ctx)return;const t=ctx.currentTime;loops.forEach(g=>{g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+.6);(g._src||[]).forEach(o=>o.stop(t+.7))});loops=[]},
-    setMood(m){want=m},
+    setMood(m){peakAt=0;if(m==='peak'&&want!=='peak'&&step%16)step+=16-step%16;want=m},   // the climax starts at once (the next step becomes its downbeat), not at the next bar
+    peakIn(sec){if(ctx)peakAt=ctx.currentTime+sec},   // start the climax in sec seconds (when a line has been spoken)
     /* new chapter: move to the chapter's key and play a short build (riser + clap roll + crash) into it */
     melody(k){wantMel=k},
     chapter(key){wantTr=key;if(ctx&&playing){fill=1;FX.lift(ctx.currentTime+.05)}},
@@ -1215,7 +1239,7 @@ const music=(()=>{
     toggle(v){on=v;if(!fading)level(on?VOL:0,.4)},
     toggleFx(v){fxOn=v},
     setVol(v){VOL=v;if(!fading)level(on?VOL:0,.5)},
-    duck(on){if(!ctx||on===duck._on)return;duck._on=on;duck.gain.setTargetAtTime(on?.74:1,ctx.currentTime,on?.06:.3)},
+    duck(on){if(!ctx||on===duck._on)return;duck._on=on;duck.gain.setTargetAtTime(on?.6:1,ctx.currentTime,on?.06:.3)},
     sfx(name,delay=0){if(!ctx||!fxOn||!playing||!FX[name])return;FX[name](ctx.currentTime+.03+delay/speed)}
   };
 })();
@@ -1226,6 +1250,7 @@ function sceneMood(s){
   if(s.ch==='片尾')return 'outro';
   if(/Therac-25|mcoMove|class="rk/.test(s.svg))return 'tense';
   if(s.cues.some(c=>/炎热的夏天|开环控制|打开车窗/.test(c)))return 'life';
+  if(s.cues.some(c=>/DYNA4 用于编辑模型|借助Vector的HIL测试平台/.test(c)))return 'peak';   // the tool chain and its benefits: the first climax
   if(s.cues.some(c=>c.includes('测试左移')))return 'bright';
   if(/^02|^结束/.test(s.ch))return 'bright';
   if(/^04/.test(s.ch))return 'thought';
@@ -1238,6 +1263,9 @@ function cueEnergy(s,ci,shown,added){
   const moving=/class="(sig|flow|spin|cycspin|drive|roadflow)|animateMotion/.test(s.svg)?1:0;
   const n=shown.length+added.length,e=Math.min(3,(n===0?0:n<=2?1:2)+moving);
   music.energy(e,(ci===0&&/font-size="220"/.test(s.svg))||KEY.test(s.cues[ci]||''));
+  if(/Vector 提供了一套完整的 HIL 测试解决方案/.test(s.cues[ci]||'')&&playing)   // the climax starts as soon as this line has been spoken
+    music.peakIn((narrOn?NARR.ends[pos]-NARR.starts[pos]+.15:flat[pos].dur)/speed);
+  if(/本期视频的主题为/.test(s.cues[ci]||''))music.setMood('explain');   // naming the topic: the groove starts
 }
 function cueSfx(s,ci,shown,added){
   cueEnergy(s,ci,shown,added);
@@ -1416,9 +1444,9 @@ prog.onclick=e=>{const r=prog.getBoundingClientRect(),t=(e.clientX-r.left)/r.wid
   let i=flat.findIndex(c=>c.t0+c.dur>t);jump(i<0?flat.length-1:i)};
 $('spd').onchange=e=>{speed=+e.target.value;if(playing)schedule()};
 $('voice').onchange=e=>{voiceOn=e.target.checked;if(playing)schedule()};
-$('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.37:.6);
+$('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.2:.35);
   $('time').textContent=`${fmt(flat[pos].t0)} / ${fmt(total)}`;if(playing)schedule()};
-music.setVol(narrOn?.37:.6);
+music.setVol(narrOn?.2:.35);
 $('vpol').onchange=e=>{vPolish=e.target.checked;voiceRoute()};
 $('bgm').onchange=e=>music.toggle(e.target.checked);
 $('cold').onchange=e=>{coldOn=e.target.checked;const inside=coldIn();if(inside)coldLeave();timing();
