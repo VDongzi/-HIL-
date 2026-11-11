@@ -1239,7 +1239,7 @@ const music=(()=>{
     toggle(v){on=v;if(!fading)level(on?VOL:0,.4)},
     toggleFx(v){fxOn=v},
     setVol(v){VOL=v;if(!fading)level(on?VOL:0,.5)},
-    duck(on){if(!ctx||on===duck._on)return;duck._on=on;duck.gain.setTargetAtTime(on?.6:1,ctx.currentTime,on?.06:.3)},
+    duck(on){if(!ctx||on===duck._on)return;duck._on=on;duck.gain.setTargetAtTime(on?.74:1,ctx.currentTime,on?.06:.3)},
     sfx(name,delay=0){if(!ctx||!fxOn||!playing||!FX[name])return;FX[name](ctx.currentTime+.03+delay/speed)}
   };
 })();
@@ -1444,9 +1444,9 @@ prog.onclick=e=>{const r=prog.getBoundingClientRect(),t=(e.clientX-r.left)/r.wid
   let i=flat.findIndex(c=>c.t0+c.dur>t);jump(i<0?flat.length-1:i)};
 $('spd').onchange=e=>{speed=+e.target.value;if(playing)schedule()};
 $('voice').onchange=e=>{voiceOn=e.target.checked;if(playing)schedule()};
-$('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.2:.35);
+$('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.37:.6);
   $('time').textContent=`${fmt(flat[pos].t0)} / ${fmt(total)}`;if(playing)schedule()};
-music.setVol(narrOn?.2:.35);
+music.setVol(narrOn?.37:.6);
 $('vpol').onchange=e=>{vPolish=e.target.checked;voiceRoute()};
 $('bgm').onchange=e=>music.toggle(e.target.checked);
 $('cold').onchange=e=>{coldOn=e.target.checked;const inside=coldIn();if(inside)coldLeave();timing();
