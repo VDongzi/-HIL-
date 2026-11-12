@@ -50,6 +50,36 @@ body.clean.peek #ctl{display:flex;z-index:40}
 #sub{position:absolute;left:0;right:0;bottom:78px;display:flex;justify-content:center;padding:0 120px}
 /* cold open: highlight montage before the opening — hard-cut flash, red caption tag, earlier lines of a scene shown at once */
 #cflash{position:absolute;inset:0;opacity:0;pointer-events:none;z-index:20}
+#cvig{position:absolute;inset:0;z-index:15;pointer-events:none;opacity:0;transition:opacity .3s;background:radial-gradient(ellipse 72% 68% at 50% 50%,rgba(36,38,45,.25) 30%,rgba(36,38,45,.82) 100%)}
+#cvig.on{opacity:1;transition:opacity .25s ease-out}
+#cbig .s{display:table;margin:22px auto 0;padding:10px 30px;border-radius:10px;background:rgba(36,38,45,.8);font-size:56px;font-weight:700;letter-spacing:3px;color:#fff;-webkit-text-stroke:0;paint-order:stroke fill;text-shadow:none;opacity:0;transform:translateY(16px);transition:opacity .3s .25s,transform .4s .25s}
+#cbig.on .s{opacity:1;transform:none}
+#cbig{position:absolute;left:0;right:0;top:470px;line-height:1.1;z-index:16;text-align:center;font-family:var(--ft);font-size:150px;font-weight:700;color:#F62634;letter-spacing:6px;
+  -webkit-text-stroke:3px #fff;paint-order:stroke fill;text-shadow:0 6px 30px rgba(36,38,45,.35);opacity:0;transform:scale(1.6);pointer-events:none}
+#cbig.on{opacity:1;transform:none;transition:opacity .12s,transform .28s cubic-bezier(.2,.9,.3,1.15)}
+#cwall{position:absolute;inset:0;z-index:14;background:#24262D;opacity:0;pointer-events:none}
+body.cwall #cwall{opacity:1;transition:opacity .2s}
+#cwall.fade{transition:opacity .8s ease}   /* leaving: dissolve into the opening */
+#cwall .stk{position:absolute;inset:0;transform-origin:960px 540px}
+#cwall.push .stk{animation:cpush 7s cubic-bezier(.3,0,.4,1) forwards}   /* a very slow push-in */
+@keyframes cpush{from{transform:scale(1)}to{transform:scale(1.08)}}
+#cwall .row{position:absolute;inset:0;transition:filter 1.4s ease}
+/* three equal full-height panels, 9 px dark gaps: 634 + 9 + 634 + 9 + 634 = 1920 */
+#cwall .cw{position:absolute;top:0;width:634px;height:1080px;overflow:hidden;background:#fff;opacity:0;transform:scale(1.03);transition:opacity .3s ease-out,transform .45s cubic-bezier(.2,.8,.2,1)}
+#cwall .cw:nth-child(1){left:0}#cwall .cw:nth-child(2){left:643px}#cwall .cw:nth-child(3){left:1286px}
+#cwall .cw.in{opacity:1;transform:none}
+#cwall .cw .scene{inset:auto;left:0;top:0;width:1920px;height:800px;transform-origin:0 0;transform:translateX(var(--tx)) scale(1.35)}   /* scene height fills the panel, cropped around its focus */
+#cwall.freeze .cw *{animation-play-state:paused!important}
+#cwall.grey .row{filter:grayscale(1) brightness(.72)}
+#cwall.dark .row{filter:grayscale(1) brightness(.36);transition:filter .9s ease}
+#cwall .wv{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.4s;background:radial-gradient(ellipse 70% 70% at 50% 50%,rgba(36,38,45,0) 42%,rgba(36,38,45,.8) 100%)}
+#cwall.grey .wv{opacity:1}
+#cwall .cmsg{position:absolute;left:0;right:0;top:50%;text-align:center;color:#fff;font-family:var(--ft);font-size:100px;font-weight:700;letter-spacing:6px;line-height:1.38;
+  opacity:0;transform:translateY(-46%);transition:opacity .9s ease,transform 1.4s cubic-bezier(.2,.7,.2,1)}
+#cwall .cmsg b{color:#F62634;font-weight:700}
+#cwall .cmsg.on{opacity:1;transform:translateY(-50%)}
+/* onlycold: shown only in the cold open; nocold: hidden there */
+.onlycold{display:none}body.cold .onlycold{display:inline}body.cold .nocold{display:none}
 #cflash.go{animation:cflash .35s ease-out}
 @keyframes cflash{0%{opacity:.92}100%{opacity:0}}
 #ccap{position:absolute;left:120px;top:140px;z-index:15;background:#F62634;color:#fff;font-family:var(--ft);font-size:46px;font-weight:500;padding:12px 34px;border-radius:8px;opacity:0;transform:translateX(-40px);transition:opacity .25s,transform .4s cubic-bezier(.2,.9,.3,1.2)}
@@ -279,7 +309,10 @@ body.rec,body.rec #stage{cursor:none}
   <div id="scn"></div>
   <div id="sub"><span></span></div>
   <div id="bar"></div>
+  <div id="cwall"></div>
   <div id="ccap"></div>
+  <div id="cvig"></div>
+  <div id="cbig"></div>
   <div id="cflash"></div>
 </div></div>
 <div id="ctl">
@@ -312,7 +345,7 @@ document.getElementById('defs').innerHTML=['red','dark','gray','blue','green','o
 
 /* ---------- drawing helpers ---------- */
 const tw=(s,z)=>{let w=0;for(const ch of s)w+=/[\x00-\xff]/.test(ch)?z*.56:z;return w};
-const R=(at,inner,fx='up',o={})=>`<g class="r ${fx}" data-at="${at}"${o.out!=null?` data-out="${o.out}"`:''} style="transition-delay:${o.d||0}s;--d:${o.d||0}s">${inner}</g>`;
+const R=(at,inner,fx='up',o={})=>`<g class="r ${fx}${o.cls?' '+o.cls:''}" data-at="${at}"${o.out!=null?` data-out="${o.out}"`:''} style="transition-delay:${o.d||0}s;--d:${o.d||0}s">${inner}</g>`;
 const T=(x,y,s,o={})=>{const z=o.size||36,ls=String(s).split('\n'),lh=z*1.3;
   const tt=(o.w||400)>=600;
   return `<text${tt?' class="tt"':''} x="${x}" y="${y}" font-size="${z}" fill="${o.fill||C.dark}" font-weight="${tt?500:400}" text-anchor="${o.a==='start'?'start':o.a==='end'?'end':'middle'}" dominant-baseline="central"${o.ls?` letter-spacing="${o.ls}"`:''}>${ls.map((l,i)=>`<tspan x="${x}" dy="${i?lh:-(ls.length-1)/2*lh}">${l}</tspan>`).join('')}</text>`};
@@ -675,8 +708,10 @@ const scenes=[
  +`<g transform="translate(560,620)"><g class="rk" data-add="1 launch">${R(1,'<path class="flick" d="M-24,0 Q0,95 24,0 Z" fill="#FA5146"/><path class="flick" d="M-13,0 Q0,58 13,0 Z" fill="#FFA900"/>','fade')}${rocket()}</g></g>`
  +R(1,`<circle cx="500" cy="630" r="50" fill="#E0E2E8"/><circle cx="620" cy="635" r="44" fill="#E0E2E8"/><circle cx="560" cy="650" r="40" fill="#E0E2E8"/>`,'pop',{d:.3})
  +R(1,boom(560,140).replace(' data-sfx="boom"',''),'pop',{d:2.3})   /* no explosion sound here */
- +R(0,B(1060,110,360,150,{t:'数年',s:'研发时间',ts:56,rx:20}),'up')
- +R(0,B(1460,110,360,150,{t:'数亿美元',s:'资金投入',ts:56,rx:20}),'up',{d:.3})
+ +R(0,B(1060,110,360,150,{t:'数年',s:'研发时间',ts:56,rx:20}),'up',{cls:'nocold'})
+ +R(0,B(1460,110,360,150,{t:'数亿美元',s:'资金投入',ts:56,rx:20}),'up',{d:.3,cls:'nocold'})
+ /* cold open only: the real launch */
+ +R(1,B(1060,250,760,200,{t:'阿丽亚娜 5 号 · 首飞',s:'1996.06.04 · 法属圭亚那 库鲁航天中心',ts:56,ss:30,rx:24}),'up',{d:.2,cls:'onlycold'})
  +R(2,T(1440,360,'1996 · 阿丽亚娜5型火箭首次发射',{size:40,w:800}),'up')
  +R(3,B(1060,440,760,200,{fill:C.redL,stroke:C.red,rx:20})+T(1440,500,'64 位浮点数 → 16 位整数',{size:40,w:700})+T(1440,575,'数值转换溢出 → 软件异常',{size:34,w:800,fill:C.red}),'pop')},
 
@@ -1201,6 +1236,8 @@ const music=(()=>{
       const g3=ctx.createGain();env(g3,t+.2,.08,.01,.4);osc('sine',mtof(42),t+.2,.4,fx,g3)},
     alert(t){[0,.2].forEach(d=>{const g=ctx.createGain();env(g,t+d,.06,.01,.16);osc('triangle',740,t+d,.16,fx,g)})},
     bug(t){[0,.03,.075].forEach(d=>{const g=ctx.createGain();env(g,t+d,.05,.001,.02);osc('square',2000+Math.random()*3000,t+d,.02,fx,g)})},
+    swish(t){const f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.Q.value=1.1;f.frequency.setValueAtTime(600,t);f.frequency.exponentialRampToValueAtTime(5000,t+.35);   // a soft airy whoosh
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.05,t+.12);g.gain.exponentialRampToValueAtTime(.0001,t+.45);noiseSrc(t,.5).connect(f);f.connect(g);g.connect(fx);g.connect(delay)},
     boom(t){const g=ctx.createGain();env(g,t,.3,.01,1.1);const o=osc('sine',75,t,1.1,fx,g);o.frequency.exponentialRampToValueAtTime(30,t+.9);
       const f=ctx.createBiquadFilter(),g2=ctx.createGain();f.type='lowpass';f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(100,t+.9);env(g2,t,.15,.005,.9);noiseSrc(t,1).connect(f);f.connect(g2);g2.connect(fx)},
     tick(t){const g=ctx.createGain();env(g,t,.06,.001,.03);osc('sine',2600,t,.03,fx,g)},
@@ -1294,21 +1331,33 @@ const prog=$('prog');
    It is the first part of the timeline (progress bar + time), so it can be sought to and paused like the rest.
    v: line whose picture is shown; a: narration lines heard (default v) — a number, or {i,from,text} to start part-way
    into line i at `from` s of the recording, with a shortened subtitle; step: show each heard line's picture in turn;
-   cap: optional red caption tag; hold: ms a picture-only shot (a:[]) stays; fl: flash colour into the shot (k black / w white); end: the music drops out (cliffhanger) */
+   cap: optional red caption tag; big: impact text slammed in after the lines; hold: ms a picture-only shot (a:[]) stays;
+   wall: lines whose final pictures are shown side by side and turn grey, then msg appears; fl: flash colour into the shot (k black / w white); end: the music drops out */
 const COLD=[
-  {v:64,a:[{i:64,from:284.36,text:'它刚刚升空，便化作一团火球和浓烟'}],fl:'k'},   // "然而，" cut off
-  {v:69,a:[{i:68,from:306.08,text:'经过近10个月的航行后'},69],step:1,fl:'k'},   // "1999年，" cut off
-  {v:72,a:[72,73,{i:75,from:341.56,text:'在系统投入使用之前，必须进行充分验证'},76],step:1,fl:'k'}];   // "因此，" cut off
-const COLD_RATE=1.2;   // the montage voice runs a little faster than the main video
+  {v:64,a:[{i:64,from:284.36,text:'它刚刚升空，便化作一团火球和浓烟'}],fl:'k',big:'史上最昂贵的软件 Bug 之一',sub:'损失超 3.7 亿美元，连带炸毁 4 颗科学卫星'},   // "然而，" cut off
+  {v:69,a:[69],fl:'k',big:'彻底失联',sub:'飞行近 10 个月、约 6.7 亿公里之后'},
+  {v:73,a:[{i:73,from:329.45,pre:.25,text:'因设计缺陷和测试不足，变成了致命的陷阱'}],fl:'k',big:'至少 3 人死亡',sub:'患者承受的辐射约为正常剂量的 100 倍'},
+  {wall:[64,69,73],focus:[560,1460,700],a:[],hold:3000,msg:'这些错误，<br>本可以在 <b>测试阶段</b><br>就被发现。'}];   // the three side by side, turning grey; the music drops out; then the main video
+const COLD_RATE=1.2,COLD_BIG=2;   // montage voice rate; how long (s) the big text holds after a line
 let coldOn=true,coldTok=0,coldSkip=false,coldAt=null,coldDur=0;const coldT=[];   // coldAt: shot index while inside the montage
 const coldIn=()=>coldAt!=null;
-const clipFrom=c=>c.from??NARR.starts[c.i??c]-.05,clipLen=c=>(NARR.ends[c.i??c]+.08-clipFrom(c))/COLD_RATE;
+const clipFrom=c=>c.from??NARR.starts[c.i??c]-.05,clipLen=c=>(NARR.ends[c.i??c]+.08-clipFrom(c)+(c.pre||0))/COLD_RATE;
 /* expected start time of every shot (for the progress bar) and the montage length */
 function coldTiming(){let acc=0;COLD.forEach((s,k)=>{coldT[k]=acc;const aud=s.a||[s.v];
-  acc+=.25+(aud.length?aud.reduce((a,c)=>a+clipLen(c)+.04,0):s.hold/1000)+(s.end?.8:.15)});coldDur=acc+.3}
+  acc+=s.wall?s.wall.length*.15+1.7+s.hold/1000:.25+(aud.length?aud.reduce((a,c)=>a+clipLen(c)+.04,0):s.hold/1000)+(s.big?COLD_BIG:0)+(s.end?.6:.15)});coldDur=acc}
 coldTiming();
 const coldWait=(ms,t)=>new Promise((res,rej)=>setTimeout(()=>t===coldTok?res():rej(),ms));
 function coldFlash(k){const f=$('cflash');f.classList.remove('go');f.style.background=k==='w'?'#fff':'#000';void f.offsetWidth;f.classList.add('go')}
+function coldBig(t,sub){const c=$('cbig'),v=$('cvig');c.classList.remove('on');v.classList.toggle('on',!!t);   // the frame's edges darken while the text shows
+  if(t){c.innerHTML='';c.append(t);if(sub){const e=document.createElement('span');e.className='s';e.textContent=sub;c.append(e)}
+    c.style.fontSize=Math.min(150,Math.floor(1820/t.length))+'px';void c.offsetWidth;c.classList.add('on')}}
+/* the wall: the final picture of each line in ps, side by side (built off-screen: no sounds, no music changes) */
+function coldWall(ps,focus){const w=$('cwall');w.className='';
+  w.innerHTML='<div class="stk"><div class="row">'+ps.map((p,k)=>{const sc=scenes[flat[p].si];return `<div class="cw"><div class="scene soft instant" style="--tx:${317-1.35*focus[k]}px">${sc.under||''}<svg viewBox="0 0 1920 800" xmlns="http://www.w3.org/2000/svg">${sc.svg}</svg></div></div>`}).join('')+'</div><div class="wv"></div></div><div class="cmsg"></div>';
+  [...w.querySelectorAll('.cw .scene')].forEach((r,k)=>{const ci=flat[ps[k]].ci;
+    r.querySelectorAll('[data-at]').forEach(e=>{const out=e.dataset.out;e.classList.toggle('on',ci>=+e.dataset.at&&!(out!=null&&ci>=+out))});
+    r.querySelectorAll('[data-add]').forEach(e=>{const [n,cls]=e.dataset.add.split(' ');e.classList.toggle(cls,ci>=+n)})});
+  document.body.classList.add('cwall');return w}
 function coldCap(t){const c=$('ccap');c.classList.remove('on');if(t){c.textContent=t;void c.offsetWidth;c.classList.add('on')}}
 function coldProg(t){const f=t/total*100;prog.firstElementChild.style.width=f+'%';$('bar').style.width=f+'%';$('time').textContent=`${fmt(t)} / ${fmt(total)}`}
 /* show line p's picture: on a new scene, everything before p appears at once (no animation, no sounds), then p animates */
@@ -1316,25 +1365,38 @@ function coldShow(p){const c=flat[p];
   if(c.si!==cur){render(c.si);chap.textContent='';
     if(c.ci>0){root.classList.add('instant');const fx=$('sfx').checked;music.toggleFx(false);apply(c.ci-1);music.toggleFx(fx);root.getBoundingClientRect();root.classList.remove('instant')}}
   apply(c.ci)}
-const shotPic=s=>{const a=s.a||[s.v];return s.step?a[0].i??a[0]:s.v};
+const musVol=f=>music.setVol((narrOn?.3:.48)*f);   // music level relative to normal (the finale runs at 2/3)
+const shotPic=s=>{if(s.wall)return null;const a=s.a||[s.v];return s.step?a[0].i??a[0]:s.v};
 /* enter shot k without playing it (seeking while paused): its first picture + caption */
-function coldPose(k){coldTok++;narrStop();coldAt=k;document.body.classList.add('cold');coldShow(shotPic(COLD[k]));coldCap(COLD[k].cap);subT.textContent='';coldProg(coldT[k])}
-function coldClip(c,t){const i=c.i??c;return new Promise((res,rej)=>{narrStop();narr.preservesPitch=true;narr.playbackRate=COLD_RATE;narr.currentTime=Math.max(0,clipFrom(c));voiceChain();music.duck(true);
+function coldPose(k){coldTok++;narrStop();coldAt=k;const s=COLD[k];musVol(s.wall?2/3:1);document.body.classList.add('cold');coldBig('');document.body.classList.remove('cwall');
+  if(s.wall){const w=coldWall(s.wall,s.focus);w.querySelectorAll('.cw').forEach(e=>e.classList.add('in'));w.classList.add('freeze','grey','dark','push');const m=w.querySelector('.cmsg');m.innerHTML=s.msg;m.classList.add('on')}
+  else coldShow(shotPic(s));coldCap(s.cap);subT.textContent='';coldProg(coldT[k])}
+function coldClip(c,t){const i=c.i??c;return new Promise((res,rej)=>{narrStop();narr.preservesPitch=true;narr.playbackRate=COLD_RATE;narr.currentTime=Math.max(0,clipFrom(c)-(c.pre||0));voiceChain();music.duck(true);
+  if(vGate){const g=vGate.gain;g.cancelScheduledValues(0);g.setValueAtTime(c.pre?0:1,vctx.currentTime);   // pre: play from a bit earlier, silent until `from`
+    if(c.pre)narr.addEventListener('playing',()=>g.setTargetAtTime(1,vctx.currentTime+Math.max(0,(clipFrom(c)-narr.currentTime)/COLD_RATE),.005),{once:true})}
   subT.textContent=c.text||flat[i].text;sub.classList.remove('anim');void sub.offsetWidth;sub.classList.add('anim');narr.play().catch(()=>{});
   const iv=setInterval(()=>{if(t!==coldTok){clearInterval(iv);rej();return}
     if(narr.ended||narr.currentTime>=NARR.ends[i]+.08){clearInterval(iv);narr.pause();music.duck(false);res()}},30)})}
 async function coldRun(k0=0){const t=++coldTok;document.body.classList.add('cold');music.start(k0===0);
   try{for(let k=k0;k<COLD.length;k++){const s=COLD[k],aud=s.a||[s.v];let at=coldT[k]+.25;coldAt=k;coldProg(coldT[k]);
-      coldFlash(s.fl);coldShow(shotPic(s));coldCap(s.cap);if(s.end)music.cue(true,.4);
+      musVol(s.wall?2/3:1);if(s.fl)coldFlash(s.fl);coldBig('');document.body.classList.remove('cwall');if(!s.wall)coldShow(shotPic(s));coldCap(s.cap);if(s.end)music.cue(true,.4);
+      if(s.wall){subT.textContent='';const w=coldWall(s.wall,s.focus);
+        for(const e of w.querySelectorAll('.cw')){e.classList.add('in');music.sfx('swish');await coldWait(150,t)}   // quick, each one readable
+        await coldWait(200,t);w.classList.add('freeze','grey','push');   // freeze, drain the colour, slow push-in (the music carries on)
+        await coldWait(1500,t);
+        w.classList.add('dark');const m=w.querySelector('.cmsg');m.innerHTML=s.msg;m.classList.add('on');
+        await coldWait(s.hold,t);continue}
       await coldWait(250,t);
       if(!aud.length){subT.textContent='';await coldWait(s.hold,t)}
       for(let j=0;j<aud.length;j++){if(s.step&&j){const p=aud[j].i??aud[j];if(flat[p].si!==cur)coldCap('');coldShow(p)}   /* the caption belongs to the shot's first scene */
         coldProg(at);at+=clipLen(aud[j])+.04;await coldClip(aud[j],t)}
-      await coldWait(s.end?800:150,t);coldCap('')}
+      if(s.big){subT.textContent='';coldBig(s.big,s.sub);music.sfx('boom');await coldWait(COLD_BIG*1000,t)}   // the cost, slammed in
+      await coldWait(s.end?600:150,t);coldCap('')}
   }catch(e){return}
-  coldLeave();coldFlash('w');pos=0;cur=-1;coldSkip=true;setPlaying(true)}   // hand over to the normal opening
+  const w=$('cwall');w.classList.add('fade');setTimeout(()=>w.classList.remove('fade'),900);
+  coldLeave();scn.innerHTML='';pos=0;cur=-1;coldSkip=true;setPlaying(true)}   // hand over to the normal opening
 /* leave the montage (it ended, or the main video was sought to): the next go() renders its scene afresh */
-function coldLeave(){coldTok++;coldAt=null;narrStop();coldCap('');subT.textContent='';document.body.classList.remove('cold');cur=-1}
+function coldLeave(){coldTok++;coldAt=null;musVol(1);narrStop();coldCap('');coldBig('');subT.textContent='';document.body.classList.remove('cold','cwall');cur=-1}
 function timing(){
   if(narrOn){const N=NARR.starts.length;   // each line starts just before its words are heard; the outro follows the last line
     flat.forEach((c,i)=>{c.t0=i===0?0:i<N?NARR.lead+NARR.starts[i]-.15:NARR.lead+NARR.ends[N-1]+.6});
@@ -1346,7 +1408,7 @@ function timing(){
   scenes.forEach((s,si)=>{const c=flat.find(f=>f.si===si);marks+=`<b style="left:${c.t0/total*100}%"></b>`});prog.insertAdjacentHTML('beforeend',marks)}
 timing();
 
-const SUB_LAG=.25;   // seconds the subtitle appears after the voice
+const SUB_LEAD=.08;   // seconds the subtitle appears before the voice (its fade-in takes a moment)
 let subTimer=null,pos=0,cur=-1,root=null,playing=false,timer=null,token=0,speed=1.1,voiceOn=false,zhVoice=null;
 function render(si){cur=si;const s=scenes[si],old=[...scn.querySelectorAll('.scene:not(.out)')];
   music.setMood(sceneMood(s));music.stopLoops();
@@ -1371,11 +1433,11 @@ function headsAfterDraw(shown){shown.forEach(e=>{if(!e.classList.contains('draw'
 const fmt=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
 function go(p){p=Math.max(0,Math.min(flat.length-1,p));pos=p;const c=flat[p];music.cue(p===flat.length-1,c.dur/speed);
   if(c.si!==cur)render(c.si);apply(c.ci);
-  /* with the recorded voice, the subtitle follows slightly after the words start (the picture still leads) */
+  /* with the recorded voice, the subtitle appears as the words start (SUB_LEAD early, so its fade-in is readable on the first syllable) */
   clearTimeout(subTimer);const showSub=()=>{subT.textContent=c.text;sub.classList.remove('anim');void sub.offsetWidth;sub.classList.add('anim')};
-  // the first line waits until "大家好" has been heard (the voice starts after the logo lead; "大家好" ends ~0.6 s in)
-  if(narrOn&&playing&&p===0){subT.textContent='';subTimer=setTimeout(showSub,(NARR.lead+.62)*1000/speed)}
-  else if(narrOn&&playing)subTimer=setTimeout(showSub,(.15+SUB_LAG)*1000/speed);else showSub();
+  if(narrOn&&playing&&p===0){subT.textContent='';subTimer=setTimeout(showSub,Math.max(0,NARR.lead+NARR.starts[0]-SUB_LEAD)*1000/speed)}   // the voice starts after the logo lead
+  else if(narrOn&&playing&&p<NARR.starts.length){const t=narr.currentTime,w=NARR.starts[p]-SUB_LEAD-t;   // w: recording seconds until the words
+    subTimer=setTimeout(showSub,(w>0&&w<1?w:0)*1000/speed)}else showSub();   // (after a jump the voice is not there yet: show at once)
   const f=c.t0/total*100;prog.firstElementChild.style.width=f+'%';$('bar').style.width=f+'%';$('time').textContent=`${fmt(c.t0)} / ${fmt(total)}`}
 /* narration audio drives the cues: while it plays, the line whose words are being heard is shown */
 const narr=new Audio(NARR.src);narr.preload='auto';let leadT=null,poll=null;
@@ -1388,7 +1450,7 @@ function narrStop(){narr.pause();clearTimeout(leadT);clearInterval(poll);poll=nu
    up clarity and air, plus a light harmonic exciter that adds real high-frequency detail. Same timbre, no pitch change:
    rumble cut (110 Hz) -> de-mud (−3 dB @220 Hz) -> de-box (−3.5 dB @420 Hz) -> presence (+4.5 dB @3 kHz, +3 dB @5 kHz)
    -> brightness/air (+6 dB shelf from 7 kHz) -> gentle compression; in parallel a high-band exciter (harmonics above 6 kHz). */
-let vctx=null,vSrc=null,vChain=null,vPolish=true;
+let vctx=null,vSrc=null,vChain=null,vPolish=true,vGate=null;   // vGate: mutes a clip's pre-roll
 function voiceChain(){if(vctx){vctx.resume();return}
   vctx=new (window.AudioContext||window.webkitAudioContext)();vSrc=vctx.createMediaElementSource(narr);
   const bq=(type,f,gain,Q)=>{const b=vctx.createBiquadFilter();b.type=type;b.frequency.value=f;if(gain!=null)b.gain.value=gain;if(Q)b.Q.value=Q;return b};
@@ -1403,7 +1465,7 @@ function voiceChain(){if(vctx){vctx.resume();return}
   [hp,mud,box,pres,pres2,air,comp,make,lim].reduce((a,b)=>(a.connect(b),b));lim.connect(vctx.destination);
   hp.connect(xin);xin.connect(xsat);xsat.connect(xout);xout.connect(xg);xg.connect(comp);
   vChain=hp;voiceRoute()}
-function voiceRoute(){if(!vSrc)return;vSrc.disconnect();vSrc.connect(vPolish?vChain:vctx.destination)}
+function voiceRoute(){if(!vSrc)return;if(!vGate)vGate=vctx.createGain();vSrc.disconnect();vGate.disconnect();vSrc.connect(vGate);vGate.connect(vPolish?vChain:vctx.destination)}
 function narrSync(){
   if(narr.ended||narr.currentTime>=NARR.ends[NARR.ends.length-1]+.4){clearInterval(poll);poll=null;   // voice finished → outro
     if(pos<flat.length-1)go(flat.length-1);clearTimeout(timer);timer=setTimeout(next,flat[pos].dur*1000/speed);return}
@@ -1444,9 +1506,9 @@ prog.onclick=e=>{const r=prog.getBoundingClientRect(),t=(e.clientX-r.left)/r.wid
   let i=flat.findIndex(c=>c.t0+c.dur>t);jump(i<0?flat.length-1:i)};
 $('spd').onchange=e=>{speed=+e.target.value;if(playing)schedule()};
 $('voice').onchange=e=>{voiceOn=e.target.checked;if(playing)schedule()};
-$('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.37:.6);
+$('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.3:.48);
   $('time').textContent=`${fmt(flat[pos].t0)} / ${fmt(total)}`;if(playing)schedule()};
-music.setVol(narrOn?.37:.6);
+music.setVol(narrOn?.3:.48);
 $('vpol').onchange=e=>{vPolish=e.target.checked;voiceRoute()};
 $('bgm').onchange=e=>music.toggle(e.target.checked);
 $('cold').onchange=e=>{coldOn=e.target.checked;const inside=coldIn();if(inside)coldLeave();timing();
