@@ -1334,17 +1334,17 @@ const prog=$('prog');
    cap: optional red caption tag; big: impact text slammed in after the lines; hold: ms a picture-only shot (a:[]) stays;
    wall: lines whose final pictures are shown side by side and turn grey, then msg appears; fl: flash colour into the shot (k black / w white); end: the music drops out */
 const COLD=[
-  {v:64,a:[{i:64,from:284.36,text:'它刚刚升空，便化作一团火球和浓烟'}],fl:'k',big:'史上最昂贵的软件 Bug 之一',sub:'损失超 3.7 亿美元，连带炸毁 4 颗科学卫星'},   // "然而，" cut off
+  {v:64,a:[{i:64,from:284.36,text:'它刚刚升空，便化作一团火球和浓烟'}],fl:'k',bigHold:3.2,big:'史上最昂贵的软件 Bug 之一',sub:'损失超 3.7 亿美元，连带炸毁 4 颗科学卫星'},   // "然而，" cut off
   {v:69,a:[69],fl:'k',big:'彻底失联',sub:'飞行近 10 个月、约 6.7 亿公里之后'},
   {v:73,a:[{i:73,from:329.45,pre:.25,text:'因设计缺陷和测试不足，变成了致命的陷阱'}],fl:'k',big:'至少 3 人死亡',sub:'患者承受的辐射约为正常剂量的 100 倍'},
-  {wall:[64,69,73],focus:[560,1460,700],a:[],hold:3000,msg:'这些错误，<br>本可以在 <b>测试阶段</b><br>就被发现。'}];   // the three side by side, turning grey; the music drops out; then the main video
+  {wall:[64,69,73],focus:[560,1460,700],a:[],hold:3000,msg:'这些错误<br>本可以在 <b>测试阶段</b><br>就被发现'}];   // the three side by side, turning grey; the music drops out; then the main video
 const COLD_RATE=1.2,COLD_BIG=2;   // montage voice rate; how long (s) the big text holds after a line
 let coldOn=true,coldTok=0,coldSkip=false,coldAt=null,coldDur=0;const coldT=[];   // coldAt: shot index while inside the montage
 const coldIn=()=>coldAt!=null;
 const clipFrom=c=>c.from??NARR.starts[c.i??c]-.05,clipLen=c=>(NARR.ends[c.i??c]+.08-clipFrom(c)+(c.pre||0))/COLD_RATE;
 /* expected start time of every shot (for the progress bar) and the montage length */
 function coldTiming(){let acc=0;COLD.forEach((s,k)=>{coldT[k]=acc;const aud=s.a||[s.v];
-  acc+=s.wall?s.wall.length*.15+1.7+s.hold/1000:.25+(aud.length?aud.reduce((a,c)=>a+clipLen(c)+.04,0):s.hold/1000)+(s.big?COLD_BIG:0)+(s.end?.6:.15)});coldDur=acc}
+  acc+=s.wall?s.wall.length*.15+.8+s.hold/1000:.25+(aud.length?aud.reduce((a,c)=>a+clipLen(c)+.04,0):s.hold/1000)+(s.big?s.bigHold??COLD_BIG:0)+(s.end?.6:.15)});coldDur=acc}
 coldTiming();
 const coldWait=(ms,t)=>new Promise((res,rej)=>setTimeout(()=>t===coldTok?res():rej(),ms));
 function coldFlash(k){const f=$('cflash');f.classList.remove('go');f.style.background=k==='w'?'#fff':'#000';void f.offsetWidth;f.classList.add('go')}
@@ -1365,7 +1365,7 @@ function coldShow(p){const c=flat[p];
   if(c.si!==cur){render(c.si);chap.textContent='';
     if(c.ci>0){root.classList.add('instant');const fx=$('sfx').checked;music.toggleFx(false);apply(c.ci-1);music.toggleFx(fx);root.getBoundingClientRect();root.classList.remove('instant')}}
   apply(c.ci)}
-const musVol=f=>music.setVol((narrOn?.3:.48)*f);   // music level relative to normal (the finale runs at 2/3)
+const musVol=f=>music.setVol((narrOn?.13:.21)*f);   // music level relative to normal (the finale runs at 2/3)
 const shotPic=s=>{if(s.wall)return null;const a=s.a||[s.v];return s.step?a[0].i??a[0]:s.v};
 /* enter shot k without playing it (seeking while paused): its first picture + caption */
 function coldPose(k){coldTok++;narrStop();coldAt=k;const s=COLD[k];musVol(s.wall?2/3:1);document.body.classList.add('cold');coldBig('');document.body.classList.remove('cwall');
@@ -1383,14 +1383,14 @@ async function coldRun(k0=0){const t=++coldTok;document.body.classList.add('cold
       if(s.wall){subT.textContent='';const w=coldWall(s.wall,s.focus);
         for(const e of w.querySelectorAll('.cw')){e.classList.add('in');music.sfx('swish');await coldWait(150,t)}   // quick, each one readable
         await coldWait(200,t);w.classList.add('freeze','grey','push');   // freeze, drain the colour, slow push-in (the music carries on)
-        await coldWait(1500,t);
+        await coldWait(600,t);
         w.classList.add('dark');const m=w.querySelector('.cmsg');m.innerHTML=s.msg;m.classList.add('on');
         await coldWait(s.hold,t);continue}
       await coldWait(250,t);
       if(!aud.length){subT.textContent='';await coldWait(s.hold,t)}
       for(let j=0;j<aud.length;j++){if(s.step&&j){const p=aud[j].i??aud[j];if(flat[p].si!==cur)coldCap('');coldShow(p)}   /* the caption belongs to the shot's first scene */
         coldProg(at);at+=clipLen(aud[j])+.04;await coldClip(aud[j],t)}
-      if(s.big){subT.textContent='';coldBig(s.big,s.sub);music.sfx('boom');await coldWait(COLD_BIG*1000,t)}   // the cost, slammed in
+      if(s.big){subT.textContent='';coldBig(s.big,s.sub);music.sfx('boom');await coldWait((s.bigHold??COLD_BIG)*1000,t)}   // the cost, slammed in
       await coldWait(s.end?600:150,t);coldCap('')}
   }catch(e){return}
   const w=$('cwall');w.classList.add('fade');setTimeout(()=>w.classList.remove('fade'),900);
@@ -1506,9 +1506,9 @@ prog.onclick=e=>{const r=prog.getBoundingClientRect(),t=(e.clientX-r.left)/r.wid
   let i=flat.findIndex(c=>c.t0+c.dur>t);jump(i<0?flat.length-1:i)};
 $('spd').onchange=e=>{speed=+e.target.value;if(playing)schedule()};
 $('voice').onchange=e=>{voiceOn=e.target.checked;if(playing)schedule()};
-$('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.3:.48);
+$('narr').onchange=e=>{narrOn=e.target.checked&&flat.filter(c=>c.text).length===NARR.starts.length;if(!narrOn)narrStop();timing();music.setVol(narrOn?.13:.21);
   $('time').textContent=`${fmt(flat[pos].t0)} / ${fmt(total)}`;if(playing)schedule()};
-music.setVol(narrOn?.3:.48);
+music.setVol(narrOn?.13:.21);
 $('vpol').onchange=e=>{vPolish=e.target.checked;voiceRoute()};
 $('bgm').onchange=e=>music.toggle(e.target.checked);
 $('cold').onchange=e=>{coldOn=e.target.checked;const inside=coldIn();if(inside)coldLeave();timing();
