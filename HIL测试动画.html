@@ -1334,9 +1334,9 @@ const prog=$('prog');
    cap: optional red caption tag; big: impact text slammed in after the lines; hold: ms a picture-only shot (a:[]) stays;
    wall: lines whose final pictures are shown side by side and turn grey, then msg appears; fl: flash colour into the shot (k black / w white); end: the music drops out */
 const COLD=[
-  {v:64,a:[{i:64,from:284.36,text:'它刚刚升空，便化作一团火球和浓烟'}],fl:'k',bigHold:3.2,big:'史上最昂贵的软件 Bug 之一',sub:'损失超 3.7 亿美元，连带炸毁 4 颗科学卫星'},   // "然而，" cut off
+  {v:64,a:[{i:64,from:284.36,text:'它刚刚升空，便化作一团火球和浓烟'}],fl:'k',bigHold:3.2,big:'史上最昂贵的软件 Bug 之一',sub:'损失数亿美元'},   // "然而，" cut off
   {v:69,a:[69],fl:'k',big:'彻底失联',sub:'飞行近 10 个月、约 6.7 亿公里之后'},
-  {v:73,a:[{i:73,from:329.45,pre:.25,text:'因设计缺陷和测试不足，变成了致命的陷阱'}],fl:'k',big:'至少 3 人死亡',sub:'患者承受的辐射约为正常剂量的 100 倍'},
+  {v:73,a:[{i:73,from:329.45,pre:.25,text:'因设计缺陷和测试不足，变成了致命的陷阱'}],fl:'k',big:'至少 3 人死亡',sub:'患者承受的辐射高达正常剂量的上百倍'},
   {wall:[64,69,73],focus:[560,1460,700],a:[],hold:3000,msg:'这些错误<br>本可以在 <b>测试阶段</b><br>就被发现'}];   // the three side by side, turning grey; the music drops out; then the main video
 const COLD_RATE=1.2,COLD_BIG=2;   // montage voice rate; how long (s) the big text holds after a line
 let coldOn=true,coldTok=0,coldSkip=false,coldAt=null,coldDur=0;const coldT=[];   // coldAt: shot index while inside the montage
